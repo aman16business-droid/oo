@@ -3,15 +3,23 @@ import React, { createContext, useContext, useState } from 'react';
 export interface Product {
   id: string;
   image: string;
+  images: string[];
   title: string;
+  handle: string;
+  description: string;
   originalPrice: string;
   salePrice: string;
   savePercentage: string;
+  inventory: number;
+  available: boolean;
+  variants: any[];
+  collections: string[];
 }
 
 export interface CartItem extends Product {
   quantity: number;
   size: string;
+  variantId?: string;
 }
 
 export type ViewType = 'new-arrivals' | 'old-home' | 'shop-all' | 'men-wear' | 'women-wear';
@@ -51,6 +59,7 @@ interface AppContextType {
   currentView: ViewType;
   setCurrentView: (view: ViewType) => void;
   shopifyProducts: Product[];
+  isLoading: boolean;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -79,25 +88,42 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const [currentView, setCurrentView] = useState<ViewType>('new-arrivals');
   const [shopifyProducts, setShopifyProducts] = useState<Product[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
   React.useEffect(() => {
     async function initShopify() {
+      setIsLoading(true);
       try {
         const { getAllProducts } = await import('./lib/shopify');
         const edges = await getAllProducts();
-        const formatted = edges.map(({ node }: any) => ({
-          id: node.id,
-          title: node.title,
-          image: node.images.edges[0]?.node.url || '',
-          originalPrice: node.compareAtPriceRange?.minVariantPrice.amount || node.priceRange.minVariantPrice.amount,
-          salePrice: node.priceRange.minVariantPrice.amount,
-          savePercentage: node.compareAtPriceRange ?
-            Math.round((1 - (parseFloat(node.priceRange.minVariantPrice.amount) / parseFloat(node.compareAtPriceRange.minVariantPrice.amount))) * 100).toString() + '%'
-            : '0%'
-        }));
+        const formatted: Product[] = edges.map(({ node }: any) => {
+          const totalInventory = node.variants.edges.reduce((acc: number, edge: any) => acc + (edge.node.quantityAvailable || 0), 0);
+          const isAvailable = node.variants.edges.some((edge: any) => edge.node.availableForSale);
+          const imagesArr = node.images.edges.map((e: any) => e.node.url);
+          
+          return {
+            id: node.id,
+            title: node.title,
+            handle: node.handle,
+            description: node.description,
+            image: imagesArr[0] || '',
+            images: imagesArr,
+            originalPrice: node.compareAtPriceRange?.minVariantPrice.amount || node.priceRange.minVariantPrice.amount,
+            salePrice: node.priceRange.minVariantPrice.amount,
+            savePercentage: node.compareAtPriceRange ?
+              Math.round((1 - (parseFloat(node.priceRange.minVariantPrice.amount) / parseFloat(node.compareAtPriceRange.minVariantPrice.amount))) * 100).toString() + '%'
+              : '0%',
+            inventory: totalInventory,
+            available: isAvailable,
+            variants: node.variants.edges.map((v: any) => v.node),
+            collections: node.collections.edges.map((c: any) => c.node.handle)
+          };
+        });
         setShopifyProducts(formatted);
       } catch (error) {
         console.error('Failed to fetch Shopify products:', error);
+      } finally {
+        setIsLoading(false);
       }
     }
     initShopify();
@@ -192,6 +218,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         currentView,
         setCurrentView,
         shopifyProducts,
+        isLoading,
       }}
     >
       {children}

@@ -1,49 +1,24 @@
 import React from 'react';
-import { MessageSquare } from 'lucide-react';
-import { ProductCard, shopWomensProducts } from './ProductSections';
+import { MessageSquare, Loader2 } from 'lucide-react';
+import { ProductCard } from './ProductSections';
 import { useAppContext, Product } from '../AppContext';
 
-// Extend the products for a better grid
-const products: Product[] = [
-  ...shopWomensProducts,
-  {
-    id: "w5",
-    image: "https://images.unsplash.com/photo-1496747611176-843222e1e57c?q=80&w=600&auto=format&fit=crop",
-    title: "FLORAL MIDI DRESS",
-    originalPrice: "2,499",
-    salePrice: "1,899",
-    savePercentage: "24",
-  },
-  {
-    id: "w6",
-    image: "https://images.unsplash.com/photo-1539109132314-d4a8c62e4042?q=80&w=600&auto=format&fit=crop",
-    title: "SATIN SILK BLOUSE",
-    originalPrice: "1,699",
-    salePrice: "1,299",
-    savePercentage: "23",
-  },
-  {
-    id: "w7",
-    image: "https://images.unsplash.com/photo-1620799140408-edc6dcb6d633?q=80&w=600&auto=format&fit=crop",
-    title: "LEATHER CLUTCH BAG",
-    originalPrice: "1,299",
-    salePrice: "899",
-    savePercentage: "30",
-  },
-  {
-    id: "w8",
-    image: "https://images.unsplash.com/photo-1618244972963-dbee1a7edc95?q=80&w=600&auto=format&fit=crop",
-    title: "ELEGANT SUMMER TOP",
-    originalPrice: "1,199",
-    salePrice: "999",
-    savePercentage: "16",
-  }
-];
-
 export default function WomenWearPage() {
-  const { setViewedProduct, openQuickAdd, setCurrentView, shopifyProducts } = useAppContext();
+  const { setViewedProduct, openQuickAdd, setCurrentView, shopifyProducts, isLoading } = useAppContext();
 
-  const displayProducts = shopifyProducts.length > 0 ? shopifyProducts : products;
+  if (isLoading) {
+    return (
+      <div className="w-full min-h-screen flex flex-col items-center justify-center gap-4 bg-white pt-[88px]">
+        <Loader2 className="w-10 h-10 animate-spin text-gray-400" />
+        <p className="text-gray-500 font-medium tracking-widest uppercase text-xs">Fetching Collections...</p>
+      </div>
+    );
+  }
+
+  // Filter for womens if collection exists, otherwise just the latest
+  const displayProducts = shopifyProducts.filter(p => p.collections.includes('women') || p.collections.includes('womens')).length > 0
+    ? shopifyProducts.filter(p => p.collections.includes('women') || p.collections.includes('womens'))
+    : shopifyProducts;
 
   return (
     <div className="w-full bg-white pb-20 pt-[88px]">

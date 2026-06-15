@@ -1,19 +1,45 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { X, Search, Trash2, ChevronRight, Plus, Minus, Tag, ShoppingBag } from 'lucide-react';
+import { X, Search, Trash2, ChevronRight, Plus, Minus, Tag, ShoppingBag, Loader2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useAppContext } from '../AppContext';
-import { ProductCard, bestSellerProducts } from './ProductSections';
+import { ProductCard } from './ProductSections';
 import confetti from 'canvas-confetti';
+import { createCheckout } from '../lib/shopify';
 
 export default function Drawers() {
   const {
     isCartOpen, setIsCartOpen, cart, removeFromCart, updateCartItemQty, updateCartItemSize,
     isFavOpen, setIsFavOpen, favorites, toggleFavorite,
-    isSearchOpen, setIsSearchOpen, setViewedProduct, openQuickAdd
+    isSearchOpen, setIsSearchOpen, setViewedProduct, openQuickAdd, shopifyProducts
   } = useAppContext();
 
   const [couponCode, setCouponCode] = useState('');
+  const [isCheckingOut, setIsCheckingOut] = useState(false);
   const celebratedThresholds = useRef<Set<number>>(new Set());
+
+  const handleCheckout = async () => {
+    if (cart.length === 0) return;
+    setIsCheckingOut(true);
+    
+    const items = cart.map(item => ({
+      variantId: item.variantId || item.variants?.[0]?.id,
+      quantity: item.quantity
+    })).filter(i => i.variantId);
+
+    if (items.length === 0) {
+      alert("Something went wrong. Please try adding items again.");
+      setIsCheckingOut(false);
+      return;
+    }
+
+    const url = await createCheckout(items);
+    if (url) {
+      window.location.href = url;
+    } else {
+      alert("Failed to create checkout. Please try again.");
+      setIsCheckingOut(false);
+    }
+  };
 
   // Calculate cart total
   const cartTotal = cart.reduce((total, item) => {
@@ -181,16 +207,23 @@ export default function Drawers() {
                                 </button>
                               </div>
                               
-                              <div className="flex items-center">
+                          <div className="flex items-center">
                                 <div className="relative">
                                   <select 
-                                    value={item.selectedSize}
+                                    value={item.size}
                                     onChange={(e) => updateCartItemSize(index, e.target.value)}
                                     className="appearance-none bg-gray-50 border border-gray-200 text-[9px] font-black px-2 py-0.5 rounded-md pr-6 focus:outline-none focus:ring-1 focus:ring-black h-6 cursor-pointer uppercase tracking-widest"
                                   >
-                                    {['XS', 'S', 'M', 'L', 'XL', 'XXL'].map(s => (
-                                      <option key={s} value={s}>{s}</option>
-                                    ))}
+                                    {item.variants?.length > 0 ? (
+                                      [...new Set(item.variants.map((v: any) => {
+                                        const sizeOpt = v.selectedOptions.find((o: any) => o.name.toLowerCase() === 'size' || o.name.toLowerCase() === 'title');
+                                        return sizeOpt ? sizeOpt.value : null;
+                                      }).filter(Boolean))].map(s => (
+                                        <option key={s} value={s}>{s}</option>
+                                      ))
+                                    ) : (
+                                      <option value={item.size}>{item.size}</option>
+                                    )}
                                   </select>
                                   <div className="absolute right-1 top-1/2 -translate-y-1/2 pointer-events-none text-gray-400 scale-[0.5]">
                                     <ChevronRight size={14} className="rotate-90" />
@@ -217,7 +250,7 @@ export default function Drawers() {
                               </div>
                               
                               <div className="text-right">
-                                <div className="text-[10px] font-black text-black leading-tight">₹{parseInt(item.salePrice.replace(/[^0-9]/g, '')).toLocaleString()}</div>
+                                <div className="text-[10px] font-black text-black leading-tight">₹{parseFloat(item.salePrice).toLocaleString()}</div>
                               </div>
                             </div>
                           </div>
@@ -225,11 +258,11 @@ export default function Drawers() {
                       ))}
                     </div>
                   </div>
-                    {/* Fixed Suggested Strip */}
+                  {/* Fixed Suggested Strip */}
                   <div className="bg-[#fcfcfc] border-t border-black/[0.02] pt-4 pb-3 shrink-0">
                     <h4 className="text-[9px] font-black text-gray-400 uppercase tracking-[0.25em] mb-3 px-5 italic opacity-80">Suggested for you</h4>
                     <div className="flex gap-3 overflow-x-auto no-scrollbar pb-1 px-5 snap-x">
-                      {bestSellerProducts.slice(0, 10).map((product) => (
+                      {shopifyProducts.slice(0, 10).map((product) => (
                         <div key={product.id} className="min-w-[125px] snap-start bg-white rounded-2xl overflow-hidden border border-gray-100 shadow-[0_4px_15px_rgba(0,0,0,0.02)] flex flex-col group transition-transform hover:-translate-y-1">
                           <div 
                               className="h-28 bg-gray-50 relative overflow-hidden cursor-pointer"
@@ -239,9 +272,11 @@ export default function Drawers() {
                               }}
                           >
                             <img src={product.image} alt={product.title} className="w-full h-full object-cover mix-blend-multiply group-hover:scale-110 transition duration-700" />
-                            <div className="absolute top-2 left-2 bg-[#e33535] text-white text-[7px] font-black px-2 py-0.5 rounded-[4px] uppercase tracking-tighter shadow-sm">
-                              {product.savePercentage}% OFF
-                            </div>
+                            {parseFloat(product.savePercentage) > 0 && (
+                              <div className="absolute top-2 left-2 bg-[#e33535] text-white text-[7px] font-black px-2 py-0.5 rounded-[4px] uppercase tracking-tighter shadow-sm">
+                                {product.savePercentage} OFF
+                              </div>
+                            )}
                           </div>
                           <div className="p-2.5 flex flex-col flex-1">
                             <h5 className="text-[8px] font-black text-gray-800 uppercase tracking-tight truncate mb-1.5">{product.title}</h5>
@@ -278,8 +313,13 @@ export default function Drawers() {
                           <span className="text-[9px] font-bold text-gray-400 uppercase tracking-widest leading-none">Grand Total</span>
                           <span className="text-base font-black text-black">₹{cartTotal.toLocaleString()}.00</span>
                        </div>
-                       <button className="bg-black text-white px-8 py-3 rounded-xl text-[10px] font-black uppercase tracking-[0.15em] hover:scale-[1.02] active:scale-[0.98] transition-all shadow-lg active:shadow-none">
-                          Checkout
+                       <button 
+                         disabled={isCheckingOut}
+                         onClick={handleCheckout}
+                         className="bg-black text-white px-8 py-3 rounded-xl text-[10px] font-black uppercase tracking-[0.15em] hover:scale-[1.02] active:scale-[0.98] transition-all shadow-lg active:shadow-none disabled:bg-gray-400 disabled:cursor-not-allowed flex items-center gap-2"
+                       >
+                          {isCheckingOut && <Loader2 size={12} className="animate-spin" />}
+                          {isCheckingOut ? 'Processing...' : 'Checkout'}
                        </button>
                     </div>
                   </div>

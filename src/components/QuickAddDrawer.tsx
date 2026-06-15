@@ -14,13 +14,25 @@ export default function QuickAddDrawer() {
     toggleFavorite
   } = useAppContext();
 
-  const [selectedSize, setSelectedSize] = useState('XS');
+  const availableSizes = quickAddProduct?.variants ? [...new Set(quickAddProduct.variants.map((v: any) => {
+    const sizeOpt = v.selectedOptions.find((o: any) => o.name.toLowerCase() === 'size' || o.name.toLowerCase() === 'title');
+    return sizeOpt ? sizeOpt.value : null;
+  }).filter(Boolean))] : [];
+
+  const [selectedSize, setSelectedSize] = useState('OS');
+  const [selectedVariantId, setSelectedVariantId] = useState('');
   const [quantity, setQuantity] = useState(1);
 
   // Reset state when product changes
   useEffect(() => {
     if (quickAddProduct) {
-      setSelectedSize('XS');
+      const sizes = quickAddProduct.variants ? [...new Set(quickAddProduct.variants.map((v: any) => {
+        const sizeOpt = v.selectedOptions.find((o: any) => o.name.toLowerCase() === 'size' || o.name.toLowerCase() === 'title');
+        return sizeOpt ? sizeOpt.value : null;
+      }).filter(Boolean))] : [];
+      
+      setSelectedSize(sizes[0] || 'OS');
+      setSelectedVariantId(quickAddProduct.variants?.[0]?.id);
       setQuantity(1);
     }
   }, [quickAddProduct]);
@@ -30,7 +42,7 @@ export default function QuickAddDrawer() {
   const isFavorite = favorites.some((p) => p.id === quickAddProduct.id);
 
   const handleAddToCart = () => {
-    addToCart({ ...quickAddProduct, size: selectedSize, quantity });
+    addToCart({ ...quickAddProduct, size: selectedSize, quantity, variantId: selectedVariantId });
     setIsQuickAddOpen(false);
   };
 
@@ -114,16 +126,24 @@ export default function QuickAddDrawer() {
                     </button>
                   </div>
                   <div className="flex flex-wrap gap-2">
-                    {['XS', 'S', 'M', 'L', 'XL', 'XXL'].map((size) => (
-                      <motion.button 
-                        key={size}
-                        whileTap={{ scale: 0.95 }}
-                        onClick={() => setSelectedSize(size)}
-                        className={`min-w-[50px] h-12 flex items-center justify-center border text-[12px] font-bold tracking-widest uppercase rounded-sm transition-all ${selectedSize === size ? 'border-black bg-black text-white shadow-lg' : 'border-gray-200 text-gray-900 hover:border-gray-400'}`}
-                      >
-                        {size}
-                      </motion.button>
-                    ))}
+                    {availableSizes.length > 0 ? (
+                      availableSizes.map((size) => (
+                        <motion.button 
+                          key={size}
+                          whileTap={{ scale: 0.95 }}
+                          onClick={() => {
+                            setSelectedSize(size);
+                            const variant = quickAddProduct.variants.find((v: any) => v.selectedOptions.some((o: any) => o.value === size));
+                            if (variant) setSelectedVariantId(variant.id);
+                          }}
+                          className={`min-w-[50px] px-3 h-12 flex items-center justify-center border text-[12px] font-bold tracking-widest uppercase rounded-sm transition-all ${selectedSize === size ? 'border-black bg-black text-white shadow-lg' : 'border-gray-200 text-gray-900 hover:border-gray-400'}`}
+                        >
+                          {size}
+                        </motion.button>
+                      ))
+                    ) : (
+                      <span className="text-gray-400 italic text-xs tracking-widest">No sizes available</span>
+                    )}
                   </div>
                 </div>
 

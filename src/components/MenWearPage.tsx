@@ -1,49 +1,24 @@
 import React from 'react';
-import { MessageSquare } from 'lucide-react';
-import { ProductCard, shopMensProducts } from './ProductSections';
+import { MessageSquare, Loader2 } from 'lucide-react';
+import { ProductCard } from './ProductSections';
 import { useAppContext, Product } from '../AppContext';
 
-// Extend the products for a better grid
-const products: Product[] = [
-  ...shopMensProducts,
-  {
-    id: "m5",
-    image: "https://images.unsplash.com/photo-1491336477066-31156b5e4f35?q=80&w=600&auto=format&fit=crop",
-    title: "BUSINESS CASUAL BLAZER",
-    originalPrice: "5,499",
-    salePrice: "4,299",
-    savePercentage: "22",
-  },
-  {
-    id: "m6",
-    image: "https://images.unsplash.com/photo-1593032465175-481ac7f401a0?q=80&w=600&auto=format&fit=crop",
-    title: "VINTAGE WASH DENIM",
-    originalPrice: "2,999",
-    salePrice: "2,499",
-    savePercentage: "17",
-  },
-  {
-    id: "m7",
-    image: "https://images.unsplash.com/photo-1549037173-e3b717902c57?q=80&w=600&auto=format&fit=crop",
-    title: "ATHLETIC TECH SHORTS",
-    originalPrice: "1,299",
-    salePrice: "999",
-    savePercentage: "23",
-  },
-  {
-    id: "m8",
-    image: "https://images.unsplash.com/photo-1617137968427-85924c800a22?q=80&w=600&auto=format&fit=crop",
-    title: "LINEN SUMMER TROUSERS",
-    originalPrice: "1,899",
-    salePrice: "1,599",
-    savePercentage: "16",
-  }
-];
-
 export default function MenWearPage() {
-  const { setViewedProduct, openQuickAdd, setCurrentView, shopifyProducts } = useAppContext();
+  const { setViewedProduct, openQuickAdd, setCurrentView, shopifyProducts, isLoading } = useAppContext();
 
-  const displayProducts = shopifyProducts.length > 0 ? shopifyProducts : products;
+  if (isLoading) {
+    return (
+      <div className="w-full min-h-screen flex flex-col items-center justify-center gap-4 bg-white pt-[88px]">
+        <Loader2 className="w-10 h-10 animate-spin text-gray-400" />
+        <p className="text-gray-500 font-medium tracking-widest uppercase text-xs">Fetching Collections...</p>
+      </div>
+    );
+  }
+
+  // Filter for mens if collection exists, otherwise just the latest
+  const displayProducts = shopifyProducts.filter(p => p.collections.includes('men') || p.collections.includes('mens')).length > 0
+    ? shopifyProducts.filter(p => p.collections.includes('men') || p.collections.includes('mens'))
+    : shopifyProducts;
 
   return (
     <div className="w-full bg-white pb-20 pt-[88px]">

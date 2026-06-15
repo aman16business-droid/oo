@@ -11,7 +11,13 @@ async function shopifyFetch({ query, variables }: { query: string; variables?: a
         'X-Shopify-Storefront-Access-Token': storefrontAccessToken,
       },
       body: JSON.stringify({ query, variables }),
+      cache: 'no-store', // Ensure we always get live data
     });
+
+    if (!result.ok) {
+      const errorText = await result.text();
+      throw new Error(`Shopify API error: ${result.status} ${errorText}`);
+    }
 
     return {
       status: result.status,
@@ -29,14 +35,14 @@ async function shopifyFetch({ query, variables }: { query: string; variables?: a
 export async function getAllProducts() {
   const query = `
     query getProducts {
-      products(first: 20) {
+      products(first: 100) {
         edges {
           node {
             id
             title
             handle
             description
-            images(first: 1) {
+            images(first: 5) {
               edges {
                 node {
                   url
@@ -56,6 +62,31 @@ export async function getAllProducts() {
                 currencyCode
               }
             }
+            variants(first: 20) {
+              edges {
+                node {
+                  id
+                  title
+                  quantityAvailable
+                  availableForSale
+                  selectedOptions {
+                    name
+                    value
+                  }
+                  price {
+                    amount
+                  }
+                }
+              }
+            }
+            collections(first: 5) {
+              edges {
+                node {
+                  title
+                  handle
+                }
+              }
+            }
           }
         }
       }
@@ -63,5 +94,48 @@ export async function getAllProducts() {
   `;
 
   const response = await shopifyFetch({ query });
+  
+  if (response.error || !response.body?.data) {
+    console.error('Shopify response error:', response);
+    return [];
+  }
+
   return response.body.data.products.edges;
+}
+
+export async function createCheckout(items: { variantId: string; quantity: number }[]) {
+  const query = `
+    mutation checkoutCreate($input: CheckoutCreateInput!) {
+      checkoutCreate(input: $input) {
+        checkout {
+          id
+          webUrl
+        }
+        checkoutUserErrors {
+          code
+          field
+          message
+        }
+      }
+    }
+  `;
+
+  const variables = {
+    input: {
+      lineItems: items.map(item => ({
+        variantId: item.variantId,
+        quantity: item.quantity
+      }))
+    }
+  };
+
+  const response = await shopifyFetch({ query, variables });
+  
+  if (response.error || !response.body?.data?.checkoutCreate?.checkout) {
+    console.error('Checkout error:', response);
+    // Fallback or error handling
+    return null;
+  }
+
+  return response.body.data.checkoutCreate.checkout.webUrl;
 }

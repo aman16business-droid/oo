@@ -1,49 +1,24 @@
 import React, { useState } from 'react';
-import { ChevronDown, MessageSquare, RefreshCcw, Shirt, Tag } from 'lucide-react';
-import { ProductCard, newInProducts } from './ProductSections';
+import { ChevronDown, MessageSquare, RefreshCcw, Shirt, Tag, Loader2 } from 'lucide-react';
+import { ProductCard } from './ProductSections';
 import { useAppContext, Product } from '../AppContext';
 
-// We duplicate or extend the newInProducts to show a nice grid
-const products: Product[] = [
-  ...newInProducts,
-  {
-    id: "n5",
-    image: "https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?q=80&w=600&auto=format&fit=crop",
-    title: "SUMMER BREEZE DRESS",
-    originalPrice: "1,299",
-    salePrice: "999",
-    savePercentage: "23",
-  },
-  {
-    id: "n6",
-    image: "https://images.unsplash.com/photo-1542272454315-4c01d7abdf4a?q=80&w=600&auto=format&fit=crop",
-    title: "CASUAL DENIM JACKET",
-    originalPrice: "2,499",
-    salePrice: "1,999",
-    savePercentage: "20",
-  },
-  {
-    id: "n7",
-    image: "https://images.unsplash.com/photo-1588661878939-ea4e1d51a9a4?q=80&w=600&auto=format&fit=crop",
-    title: "LINEN BLEND SHIRT",
-    originalPrice: "1,499",
-    salePrice: "1,299",
-    savePercentage: "13",
-  },
-  {
-    id: "n8",
-    image: "https://images.unsplash.com/photo-1583743814966-8936f5b7be1a?q=80&w=600&auto=format&fit=crop",
-    title: "GRAPHIC PRINT TEE",
-    originalPrice: "899",
-    salePrice: "799",
-    savePercentage: "11",
-  }
-];
-
 export default function NewArrivalsPage() {
-  const { setViewedProduct, openQuickAdd, setCurrentView, shopifyProducts } = useAppContext();
+  const { setViewedProduct, openQuickAdd, setCurrentView, shopifyProducts, isLoading } = useAppContext();
 
-  const displayProducts = shopifyProducts.length > 0 ? shopifyProducts : products;
+  if (isLoading) {
+    return (
+      <div className="w-full min-h-screen flex flex-col items-center justify-center gap-4 bg-white pt-[88px]">
+        <Loader2 className="w-10 h-10 animate-spin text-gray-400" />
+        <p className="text-gray-500 font-medium tracking-widest uppercase text-xs">Fetching New Arrivals...</p>
+      </div>
+    );
+  }
+
+  // Filter for new arrivals if collection exists, otherwise just the latest
+  const displayProducts = shopifyProducts.filter(p => p.collections.includes('new-arrivals')).length > 0
+    ? shopifyProducts.filter(p => p.collections.includes('new-arrivals'))
+    : shopifyProducts;
 
   return (
     <div className="w-full bg-white pb-20 pt-[88px]">

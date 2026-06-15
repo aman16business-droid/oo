@@ -1,23 +1,38 @@
 import React, { useState } from 'react';
-import { Heart, Ruler, ChevronRight, Truck, ShieldCheck, CreditCard } from 'lucide-react';
+import { Heart, Ruler, ChevronRight, Truck, ShieldCheck, CreditCard, Loader2 } from 'lucide-react';
 import { motion } from 'motion/react';
 import { useAppContext, Product } from '../AppContext';
-import { ProductCard, bestSellerProducts } from './ProductSections';
+import { ProductCard } from './ProductSections';
 import { getProductHearts } from '../utils/productUtils';
 
 export default function ProductPage({ product }: { product: Product }) {
-  const { addToCart, favorites, toggleFavorite, setViewedProduct, setCurrentView, recentlyViewed, openQuickAdd, setIsCartOpen } = useAppContext();
-  const [selectedSize, setSelectedSize] = useState('XS');
+  const { addToCart, favorites, toggleFavorite, setViewedProduct, setCurrentView, recentlyViewed, openQuickAdd, setIsCartOpen, shopifyProducts, isLoading } = useAppContext();
+  
+  // Use first variant as default size if available
+  const initialSize = product.variants?.[0]?.selectedOptions?.find((o: any) => o.name.toLowerCase() === 'size')?.value || 'OS';
+  const [selectedSize, setSelectedSize] = useState(initialSize);
+  const [selectedVariantId, setSelectedVariantId] = useState(product.variants?.[0]?.id);
   const [quantity, setQuantity] = useState(1);
+  
   const isFavorite = favorites.some((p) => p.id === product.id);
 
   // Filter out the current product from recently viewed list
   const otherRecentlyViewed = recentlyViewed.filter(p => p.id !== product.id);
 
   const handleAddToCart = () => {
-    addToCart({ ...product, size: selectedSize, quantity });
+    addToCart({ ...product, size: selectedSize, quantity, variantId: selectedVariantId });
     setIsCartOpen(true);
   };
+  
+  if (isLoading) {
+     return <div className="pt-32 flex justify-center"><Loader2 className="animate-spin" /></div>;
+  }
+
+  // Get available sizes from variants
+  const availableSizes = [...new Set(product.variants.map((v: any) => {
+    const sizeOpt = v.selectedOptions.find((o: any) => o.name.toLowerCase() === 'size' || o.name.toLowerCase() === 'title');
+    return sizeOpt ? sizeOpt.value : null;
+  }).filter(Boolean))];
 
   return (
     <div className="w-full pt-28 md:pt-32 pb-16 bg-gradient-to-b from-white to-gray-50/50 shrink-0">
@@ -25,36 +40,39 @@ export default function ProductPage({ product }: { product: Product }) {
         <div className="flex flex-col lg:flex-row gap-12 xl:gap-20">
           
           {/* Left Column - Image Gallery */}
-          <div className="lg:w-[60%] flex flex-col md:flex-row gap-4">
-             {/* Desktop Thumbnails */}
-             <div className="hidden md:flex flex-col gap-4 w-20 shrink-0">
-               {[1,2,3,4].map((i) => (
-                 <div key={i} className="aspect-[3/4] bg-[#f8f8f8] rounded-sm overflow-hidden cursor-pointer border border-transparent hover:border-black transition">
-                   <img src={product.image} className="w-full h-full object-cover mix-blend-multiply" alt={`${product.title} view ${i}`} />
-                 </div>
-               ))}
-             </div>
-             
-             {/* Mobile Swipable Gallery */}
-             <div className="md:hidden flex gap-2 overflow-x-auto pb-2 no-scrollbar snap-x snap-mandatory px-4 -mx-4">
-                {[1,2,3,4].map((i) => (
-                  <div key={i} className="min-w-[85vw] aspect-[3/4] bg-[#f8f8f8] rounded-xl overflow-hidden snap-center shadow-md border border-gray-100">
-                    <img src={product.image} className="w-full h-full object-cover mix-blend-multiply" alt={`${product.title} view ${i}`} />
+             <div className="lg:w-[60%] flex flex-col md:flex-row gap-4">
+              {/* Desktop Thumbnails */}
+              <div className="hidden md:flex flex-col gap-4 w-20 shrink-0">
+                {product.images.map((img, i) => (
+                  <div key={i} className="aspect-[3/4] bg-[#f8f8f8] rounded-sm overflow-hidden cursor-pointer border border-transparent hover:border-black transition">
+                    <img src={img} className="w-full h-full object-cover mix-blend-multiply" alt={`${product.title} view ${i}`} />
                   </div>
                 ))}
-             </div>
+              </div>
+              
+              {/* Mobile Swipable Gallery */}
+              <div className="md:hidden flex gap-2 overflow-x-auto pb-2 no-scrollbar snap-x snap-mandatory px-4 -mx-4">
+                 {product.images.map((img, i) => (
+                   <div key={i} className="min-w-[85vw] aspect-[3/4] bg-[#f8f8f8] rounded-xl overflow-hidden snap-center shadow-md border border-gray-100">
+                     <img src={img} className="w-full h-full object-cover mix-blend-multiply" alt={`${product.title} view ${i}`} />
+                   </div>
+                 ))}
+              </div>
 
-             {/* Main Images (Large Screen) */}
-             <div className="hidden md:flex flex-1 flex-col gap-4">
-               <div className="w-full bg-[#f8f8f8] rounded-sm overflow-hidden">
-                 <img src={product.image} className="w-full h-auto object-cover mix-blend-multiply" alt={product.title} />
-               </div>
-               <div className="hidden md:grid grid-cols-2 gap-4">
-                  <div className="bg-[#f8f8f8] rounded-sm overflow-hidden"><img src={product.image} className="w-full h-auto object-cover mix-blend-multiply" alt={`${product.title} angle 2`} /></div>
-                  <div className="bg-[#f8f8f8] rounded-sm overflow-hidden"><img src={product.image} className="w-full h-auto object-cover mix-blend-multiply" alt={`${product.title} angle 3`} /></div>
-               </div>
-             </div>
-          </div>
+              {/* Main Images (Large Screen) */}
+              <div className="hidden md:flex flex-1 flex-col gap-4">
+                <div className="w-full bg-[#f8f8f8] rounded-sm overflow-hidden">
+                  <img src={product.image} className="w-full h-auto object-cover mix-blend-multiply" alt={product.title} />
+                </div>
+                <div className="hidden md:grid grid-cols-2 gap-4">
+                   {product.images.slice(1, 3).map((img, i) => (
+                     <div key={i} className="bg-[#f8f8f8] rounded-sm overflow-hidden">
+                       <img src={img} className="w-full h-auto object-cover mix-blend-multiply" alt={`${product.title} angle ${i + 2}`} />
+                     </div>
+                   ))}
+                </div>
+              </div>
+           </div>
 
           {/* Right Column - Product Details */}
           <div className="lg:w-[40%] flex flex-col sticky top-32 self-start">
@@ -203,21 +221,17 @@ export default function ProductPage({ product }: { product: Product }) {
                 </div>
               </div>
 
-             {/* Product Infos */}
-             <div className="flex flex-col gap-0 text-sm">
-               <DetailsAccordion title="Product Description" defaultOpen>
-                 <p className="text-gray-600 mb-4 leading-relaxed font-medium">Discover comfort and style with our premium oversized fit. Crafted with absolute precision and a high attention to detail for maximum durability and a soft touch against the skin.</p>
-                 <ul className="list-disc list-inside text-gray-600 space-y-2 font-medium mb-2">
-                   <li>100% Premium Cotton</li>
-                   <li>240 GSM (Heavyweight but breathable)</li>
-                   <li>High-Density Puff Print</li>
-                   <li>Bio-washed for zero shrinkage</li>
-                 </ul>
-               </DetailsAccordion>
-               <DetailsAccordion title="Shipping & Returns">
-                 <p className="text-gray-600 leading-relaxed font-medium">We offer free shipping across the country on all prepaid orders. Delivery within 3-5 business days. Returns are accepted within 7 days of delivery as long as the product is unworn and tags remain intact.</p>
-               </DetailsAccordion>
-             </div>
+                {/* Product Infos */}
+              <div className="flex flex-col gap-0 text-sm">
+                <DetailsAccordion title="Product Description" defaultOpen>
+                  <p className="text-gray-600 mb-4 leading-relaxed font-medium">
+                    {product.description || "No description available for this product."}
+                  </p>
+                </DetailsAccordion>
+                <DetailsAccordion title="Shipping & Returns">
+                  <p className="text-gray-600 leading-relaxed font-medium">We offer free shipping across the country on all prepaid orders. Delivery within 3-5 business days. Returns are accepted within 7 days of delivery as long as the product is unworn and tags remain intact.</p>
+                </DetailsAccordion>
+              </div>
 
           </div>
         </div>
@@ -227,7 +241,7 @@ export default function ProductPage({ product }: { product: Product }) {
       <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8 mt-16 md:mt-24 mb-12 md:mb-16">
         <h2 className="text-xl md:text-2xl font-black text-gray-900 uppercase tracking-tight mb-8 md:mb-10 text-center">YOU MAY ALSO LIKE</h2>
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-x-6 gap-y-10 md:gap-y-12">
-          {bestSellerProducts.slice(0, 4).map((p) => (
+          {shopifyProducts.slice(0, 4).map((p) => (
             <ProductCard 
               key={p.id} 
               product={p} 

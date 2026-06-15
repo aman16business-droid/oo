@@ -1,19 +1,21 @@
 import React, { useState } from 'react';
-import { ChevronDown, MessageSquare } from 'lucide-react';
-import { ProductCard, newInProducts, bestSellerProducts, shopMensProducts } from './ProductSections';
+import { ChevronDown, MessageSquare, Loader2 } from 'lucide-react';
+import { ProductCard } from './ProductSections';
 import { useAppContext, Product } from '../AppContext';
 
-// We duplicate or extend the newInProducts to show a nice grid
-const products: Product[] = [
-  ...newInProducts,
-  ...bestSellerProducts,
-  ...shopMensProducts
-];
-
 export default function ShopAllPage() {
-  const { setViewedProduct, openQuickAdd, setCurrentView, recentlyViewed, shopifyProducts } = useAppContext();
+  const { setViewedProduct, openQuickAdd, setCurrentView, recentlyViewed, shopifyProducts, isLoading } = useAppContext();
 
-  const displayProducts = shopifyProducts.length > 0 ? shopifyProducts : products;
+  if (isLoading) {
+    return (
+      <div className="w-full min-h-screen flex flex-col items-center justify-center gap-4 bg-white pt-[88px]">
+        <Loader2 className="w-10 h-10 animate-spin text-gray-400" />
+        <p className="text-gray-500 font-medium tracking-widest uppercase text-xs">Loading Catalog...</p>
+      </div>
+    );
+  }
+
+  const displayProducts = shopifyProducts;
 
   return (
     <div className="w-full bg-gradient-to-b from-white to-gray-50/50 pb-20 pt-[88px]">
@@ -74,7 +76,7 @@ export default function ShopAllPage() {
         </div>
         
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-x-6 gap-y-12">
-           {bestSellerProducts.slice(0, 4).map((product, index) => (
+           {shopifyProducts.slice(0, 4).map((product, index) => (
              <ProductCard 
                key={product.id + "-recommend-" + index} 
                product={product} 
