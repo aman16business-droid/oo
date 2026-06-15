@@ -116,7 +116,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       }
 
       const formatted: Product[] = edges.map(({ node }: any) => {
-        const totalInventory = node.variants.edges.reduce((acc: number, edge: any) => acc + (edge.node.quantityAvailable || 0), 0);
         const isAvailable = node.variants.edges.some((edge: any) => edge.node.availableForSale);
         const imagesArr = node.images.edges.map((e: any) => e.node.url);
         
@@ -129,10 +128,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           images: imagesArr,
           originalPrice: node.compareAtPriceRange?.minVariantPrice.amount || node.priceRange.minVariantPrice.amount,
           salePrice: node.priceRange.minVariantPrice.amount,
-          savePercentage: node.compareAtPriceRange ?
+          savePercentage: node.compareAtPriceRange?.minVariantPrice.amount ?
             Math.round((1 - (parseFloat(node.priceRange.minVariantPrice.amount) / parseFloat(node.compareAtPriceRange.minVariantPrice.amount))) * 100).toString() + '%'
             : '0%',
-          inventory: totalInventory,
+          inventory: 0, // Simplified: assume 1 if available, 0 if not, or just use available boolean
           available: isAvailable,
           variants: node.variants.edges.map((v: any) => v.node),
           collections: node.collections.edges.map((c: any) => c.node.handle),

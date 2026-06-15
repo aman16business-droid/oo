@@ -26,22 +26,28 @@ export default function Footer() {
           <div className="mt-14 pt-8 border-t border-white/5 max-w-[200px]">
              <div className="flex items-center justify-between gap-2 mb-4">
                <div className="flex items-center gap-2">
-                 <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></div>
-                 <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Shopify: {shopifyProducts.length} Items</span>
+                 <span className="text-[10px] font-black text-gray-400 gap-2 uppercase tracking-widest flex items-center">
+                   {shopifyProducts.length > 0 ? (
+                     <span className="text-white">STATUS: SYNCED</span>
+                   ) : (
+                     <span className="text-amber-500">STATUS: EMPTY</span>
+                   )}
+                 </span>
                </div>
                <button 
                  onClick={() => refreshProducts()} 
                  disabled={isLoading}
-                 className="p-1 hover:bg-white/10 rounded transition-colors disabled:opacity-30"
+                 className="p-1 hover:bg-white/10 rounded transition-colors disabled:opacity-30 flex items-center gap-1"
                  title="Force Resync"
                >
+                 <span className="text-[8px] uppercase font-bold text-gray-500">Refresh</span>
                  <RefreshCw size={10} className={isLoading ? 'animate-spin' : ''} />
                </button>
              </div>
              <p className="text-[9px] text-gray-600 mb-4 font-mono leading-tight">
-               Last Sync: {new Date().toLocaleTimeString()}<br/>
+               Count: {shopifyProducts.length} items<br/>
                Store: {import.meta.env.VITE_SHOPIFY_STORE_DOMAIN || 'Not set'}<br/>
-               Token: {import.meta.env.VITE_SHOPIFY_STOREFRONT_ACCESS_TOKEN ? import.meta.env.VITE_SHOPIFY_STOREFRONT_ACCESS_TOKEN.substring(0, 4) + '...' : 'Missing'}
+               Sync: {new Date().toLocaleTimeString()}
              </p>
              <ul className="space-y-2">
                {shopifyProducts.slice(0, 6).map(p => (

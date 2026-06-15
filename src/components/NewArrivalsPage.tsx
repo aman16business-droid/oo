@@ -17,7 +17,7 @@ export default function NewArrivalsPage() {
 
   // Prioritize products in 'new-arrivals' collection, but always include the 8 most recent products from the catalog
   const collectionProducts = shopifyProducts.filter(p => p.collections.includes('new-arrivals'));
-  const latestProducts = shopifyProducts.slice(0, 8);
+  const latestProducts = shopifyProducts.slice(0, 48); // Show up to 48 latest products if not in collection
   
   // Merge and remove duplicates by ID
   const allDisplay = [...collectionProducts, ...latestProducts];

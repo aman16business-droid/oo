@@ -74,14 +74,13 @@ async function startServer() {
   app.get("/api/shopify/products", async (req, res) => {
     const query = `
       query getProducts {
-        products(first: 100, sortKey: CREATED_AT, reverse: true) {
+        products(first: 100) {
           edges {
             node {
               id
               title
               handle
               createdAt
-              publishedAt
               description
               images(first: 5) {
                 edges {
@@ -108,12 +107,7 @@ async function startServer() {
                   node {
                     id
                     title
-                    quantityAvailable
                     availableForSale
-                    selectedOptions {
-                      name
-                      value
-                    }
                     price {
                       amount
                     }
@@ -134,10 +128,27 @@ async function startServer() {
       }
     `;
 
+    console.log('[Shopify Server] Fetching products for clients...');
     const response = await shopifyFetch({ query });
+    
     if (response.status !== 200) {
+      console.error('[Shopify Server] Products fetch failed:', response.status, response.error);
       return res.status(response.status).json(response);
     }
+
+    if (response.body?.errors) {
+      console.error('[Shopify Server] GraphQL Errors in products fetch:', JSON.stringify(response.body.errors, null, 2));
+    }
+
+    const count = response.body?.data?.products?.edges?.length || 0;
+    console.log(`[Shopify Server] Successfully fetched ${count} products.`);
+    
+    // Log titles of first 5 products for verification
+    if (count > 0) {
+      const titles = response.body.data.products.edges.slice(0, 5).map((e: any) => e.node.title);
+      console.log('[Shopify Server] Sample titles:', titles.join(', '));
+    }
+
     res.json(response.body);
   });
 
