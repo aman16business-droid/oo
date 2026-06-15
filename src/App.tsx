@@ -16,6 +16,7 @@ import NewArrivalsPage from './components/NewArrivalsPage';
 import ShopAllPage from './components/ShopAllPage';
 import MenWearPage from './components/MenWearPage';
 import WomenWearPage from './components/WomenWearPage';
+import SearchResultsPage from './components/SearchResultsPage';
 
 function MainContent() {
   const { viewedProduct, currentView, isCartBarVisible, cart } = useAppContext();
@@ -43,6 +44,8 @@ function MainContent() {
             <WomenWearPage />
           ) : currentView === 'shop-all' ? (
             <ShopAllPage />
+          ) : currentView === 'search-results' ? (
+            <SearchResultsPage />
           ) : (
             <>
               <Hero />

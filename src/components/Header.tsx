@@ -190,6 +190,10 @@ export default function Header() {
               <div className="flex-1 overflow-y-auto px-6 py-8 flex flex-col gap-8">
                 <div className="flex flex-col gap-6">
                     <h4 className="text-[10px] font-black text-gray-400 tracking-widest uppercase">Categories</h4>
+                    <button onClick={() => { setIsMobileMenuOpen(false); setIsSearchOpen(true); }} className="flex items-center gap-2 text-2xl font-black tracking-tight hover:text-[#df3333] transition text-left cursor-pointer text-[#df3333]">
+                      <Search size={22} strokeWidth={3} />
+                      SEARCH
+                    </button>
                     <button onClick={() => { setIsMobileMenuOpen(false); setViewedProduct(null); setCurrentView('women-wear'); }} className="text-2xl font-black tracking-tight hover:text-gray-500 transition text-left cursor-pointer">WOMEN</button>
                     <button onClick={() => { setIsMobileMenuOpen(false); setViewedProduct(null); setCurrentView('men-wear'); }} className="text-2xl font-black tracking-tight hover:text-gray-500 transition text-left cursor-pointer">MEN</button>
                     <button onClick={() => { setIsMobileMenuOpen(false); setViewedProduct(null); setCurrentView('shop-all'); }} className="text-2xl font-black tracking-tight hover:text-gray-500 transition text-left cursor-pointer uppercase opacity-60">CATALOG</button>

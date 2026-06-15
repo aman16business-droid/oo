@@ -23,7 +23,7 @@ export interface CartItem extends Product {
   variantId?: string;
 }
 
-export type ViewType = 'new-arrivals' | 'old-home' | 'shop-all' | 'men-wear' | 'women-wear';
+export type ViewType = 'new-arrivals' | 'old-home' | 'shop-all' | 'men-wear' | 'women-wear' | 'search-results';
 
 interface AppContextType {
   cart: CartItem[];
@@ -39,6 +39,8 @@ interface AppContextType {
 
   isSearchOpen: boolean;
   setIsSearchOpen: (open: boolean) => void;
+  searchQuery: string;
+  setSearchQuery: (query: string) => void;
 
   viewedProduct: Product | null;
   setViewedProduct: (product: Product | null) => void;
@@ -75,6 +77,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [isFavOpen, setIsFavOpen] = useState(false);
 
   const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
 
   const [viewedProduct, setViewedProductState] = useState<Product | null>(null);
   const [recentlyViewed, setRecentlyViewed] = useState<Product[]>([]);
@@ -241,6 +244,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         setIsFavOpen,
         isSearchOpen,
         setIsSearchOpen,
+        searchQuery,
+        setSearchQuery,
         viewedProduct,
         setViewedProduct,
         recentlyViewed,

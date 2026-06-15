@@ -2,7 +2,7 @@ import { Facebook, Twitter, Instagram, Youtube, Eclipse, ChevronRight } from 'lu
 import { useAppContext } from '../AppContext';
 
 export default function Footer() {
-  const { setViewedProduct, setCurrentView } = useAppContext();
+  const { setViewedProduct, setCurrentView, setIsSearchOpen } = useAppContext();
   
   return (
     <footer className="bg-[#111111] text-white py-20 px-8 text-sm pt-24 font-sans tracking-wide">
@@ -62,7 +62,7 @@ export default function Footer() {
           <div>
             <h4 className="text-white font-bold tracking-widest text-xs uppercase mb-6">Explore</h4>
             <ul className="space-y-4 text-gray-300">
-              <li><a href="#" className="hover:text-white transition">Search</a></li>
+              <li><button onClick={() => setIsSearchOpen(true)} className="hover:text-white transition cursor-pointer">Search</button></li>
               <li><a href="#" className="hover:text-white transition">About Us</a></li>
             </ul>
           </div>

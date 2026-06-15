@@ -10,8 +10,18 @@ export default function Drawers() {
   const {
     isCartOpen, setIsCartOpen, cart, removeFromCart, updateCartItemQty, updateCartItemSize,
     isFavOpen, setIsFavOpen, favorites, toggleFavorite,
-    isSearchOpen, setIsSearchOpen, setViewedProduct, openQuickAdd, shopifyProducts
+    isSearchOpen, setIsSearchOpen, searchQuery, setSearchQuery, 
+    setViewedProduct, openQuickAdd, shopifyProducts, setCurrentView
   } = useAppContext();
+
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (searchQuery.trim()) {
+      setViewedProduct(null);
+      setCurrentView('search-results');
+      setIsSearchOpen(false);
+    }
+  };
 
   const [couponCode, setCouponCode] = useState('');
   const [isCheckingOut, setIsCheckingOut] = useState(false);
@@ -85,20 +95,31 @@ export default function Drawers() {
       {isSearchOpen && (
         <div className="fixed inset-0 z-[100] flex flex-col pt-20 px-6 bg-white/95 backdrop-blur-md transition-all">
           <div className="max-w-4xl mx-auto w-full relative">
-            <input 
-              autoFocus
-              type="text" 
-              placeholder="Search products..." 
-              className="w-full bg-transparent border-b-2 border-black text-3xl font-light py-4 outline-none placeholder:text-gray-400"
-            />
-            <Search size={32} className="absolute right-2 top-4 text-gray-400" />
+            <form onSubmit={handleSearch}>
+              <input 
+                autoFocus
+                type="text" 
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search products..." 
+                className="w-full bg-transparent border-b-2 border-black text-3xl font-light py-4 outline-none placeholder:text-gray-400"
+              />
+              <button type="submit" className="absolute right-2 top-4 text-gray-400 hover:text-black transition">
+                <Search size={32} />
+              </button>
+            </form>
             <button 
               onClick={() => setIsSearchOpen(false)}
               className="absolute -top-12 right-0 p-2 text-gray-500 hover:text-black"
             >
               <X size={24} />
             </button>
-            <div className="mt-8 text-sm text-gray-500 font-medium tracking-wider">POPULAR SEARCHES: OVERSIZED T-SHIRT, CARGO PANTS, LINEN SHIRT</div>
+            <div className="mt-8 text-sm text-gray-500 font-medium tracking-wider flex flex-wrap gap-x-4 gap-y-2">
+              <span>POPULAR SEARCHES:</span>
+              <button onClick={() => { setSearchQuery('OVERSIZED'); handleSearch({ preventDefault: () => {} } as any); }} className="hover:text-black transition underline decoration-gray-200">OVERSIZED T-SHIRT</button>
+              <button onClick={() => { setSearchQuery('CARGO'); handleSearch({ preventDefault: () => {} } as any); }} className="hover:text-black transition underline decoration-gray-200">CARGO PANTS</button>
+              <button onClick={() => { setSearchQuery('LINEN'); handleSearch({ preventDefault: () => {} } as any); }} className="hover:text-black transition underline decoration-gray-200">LINEN SHIRT</button>
+            </div>
           </div>
         </div>
       )}
