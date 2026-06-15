@@ -2,33 +2,60 @@
 const domain = import.meta.env.VITE_SHOPIFY_STORE_DOMAIN;
 const storefrontAccessToken = import.meta.env.VITE_SHOPIFY_STOREFRONT_ACCESS_TOKEN;
 
+if (!domain || !storefrontAccessToken) {
+  console.error('[Shopify Audit] CRITICAL: Missing Shopify configuration in .env file.');
+  console.log('[Shopify Audit] Domain:', domain);
+  console.log('[Shopify Audit] Token:', storefrontAccessToken ? '********' : 'MISSING');
+}
+
 async function shopifyFetch({ query, variables }: { query: string; variables?: any }) {
+  if (!domain || !storefrontAccessToken) {
+    return { status: 500, error: 'Shopify configuration missing' };
+  }
   try {
-    const result = await fetch(`https://${domain}/api/2024-01/graphql.json?cb=${Date.now()}`, {
+    const isPrivate = storefrontAccessToken.startsWith('shpat_');
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+    };
+
+    if (isPrivate) {
+      // Private Storefront Token (for server-side or advanced apps)
+      headers['Shopify-Storefront-Private-Token'] = storefrontAccessToken!;
+    } else {
+      // Standard Public Storefront Token
+      headers['X-Shopify-Storefront-Access-Token'] = storefrontAccessToken!;
+    }
+
+    console.log(`[Shopify Audit] Fetching from ${domain}...`);
+    console.log(`[Shopify Audit] Using ${isPrivate ? 'Private' : 'Public'} Token.`);
+
+    const result = await fetch(`https://${domain}/api/2024-01/graphql.json`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-Shopify-Storefront-Access-Token': storefrontAccessToken,
-      },
+      headers,
       body: JSON.stringify({ query, variables }),
-      cache: 'no-cache', // Prevents even browser-level caching
+      cache: 'no-cache',
     });
 
     if (!result.ok) {
       const errorText = await result.text();
-      console.error('SHOPIFY API RAW ERROR:', result.status, errorText);
-      throw new Error(`Shopify API error: ${result.status} ${errorText}`);
+      console.error('[Shopify Audit] HTTP Error:', result.status, errorText);
+      throw new Error(`Shopify API error: ${result.status}`);
     }
 
     const json = await result.json();
-    console.log('SHOPIFY LIVE RESPONSE:', json);
+    
+    if (json.errors) {
+      console.error('[Shopify Audit] GraphQL Errors:', json.errors);
+    } else {
+      console.log('[Shopify Audit] Successfully received data:', !!json.data);
+    }
 
     return {
       status: result.status,
       body: json,
     };
   } catch (error) {
-    console.error('Error fetching from Shopify:', error);
+    console.error('[Shopify Audit] Fetch exception:', error);
     return {
       status: 500,
       error: 'Error receiving data from Shopify',
@@ -39,7 +66,7 @@ async function shopifyFetch({ query, variables }: { query: string; variables?: a
 export async function getAllProducts() {
   const query = `
     query getProducts {
-      products(first: 100) {
+      products(first: 100, sortKey: CREATED_AT, reverse: true) {
         edges {
           node {
             id

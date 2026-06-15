@@ -15,10 +15,15 @@ export default function NewArrivalsPage() {
     );
   }
 
-  // Filter for new arrivals if collection exists, otherwise just the latest
-  const displayProducts = shopifyProducts.filter(p => p.collections.includes('new-arrivals')).length > 0
-    ? shopifyProducts.filter(p => p.collections.includes('new-arrivals'))
-    : shopifyProducts;
+  // Prioritize products in 'new-arrivals' collection, but always include the 8 most recent products from the catalog
+  const collectionProducts = shopifyProducts.filter(p => p.collections.includes('new-arrivals'));
+  const latestProducts = shopifyProducts.slice(0, 8);
+  
+  // Merge and remove duplicates by ID
+  const allDisplay = [...collectionProducts, ...latestProducts];
+  const displayProducts = allDisplay.filter((p, index) => 
+    allDisplay.findIndex(item => item.id === p.id) === index
+  );
 
   return (
     <div className="w-full bg-white pb-20 pt-[88px]">

@@ -1,6 +1,8 @@
 import { Facebook, Twitter, Instagram, Youtube, Eclipse } from 'lucide-react';
+import { useAppContext } from '../AppContext';
 
 export default function Footer() {
+  const { shopifyProducts } = useAppContext();
   return (
     <footer className="bg-[#111111] text-white py-20 px-8 text-sm pt-24 font-sans tracking-wide">
       <div className="max-w-[1600px] mx-auto grid grid-cols-1 md:grid-cols-5 gap-12 lg:gap-8">
@@ -18,6 +20,24 @@ export default function Footer() {
             <a href="#" className="hover:text-gray-400 transition bg-white text-black p-1.5 rounded-full"><Twitter size={14} fill="currentColor" /></a>
             <a href="#" className="hover:text-gray-400 transition bg-white text-black p-1.5 rounded-full"><Instagram size={14} /></a>
             <a href="#" className="hover:text-gray-400 transition bg-white text-black p-1.5 rounded-full"><Youtube size={14} fill="currentColor" /></a>
+          </div>
+          
+          {/* Shopify Live Audit Feed */}
+          <div className="mt-14 pt-8 border-t border-white/5 max-w-[200px]">
+             <div className="flex items-center gap-2 mb-4">
+               <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></div>
+               <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Shopify Feed Audit</span>
+             </div>
+             <ul className="space-y-2">
+               {shopifyProducts.slice(0, 5).map(p => (
+                 <li key={p.id} className="text-[10px] text-gray-500 font-medium truncate border-l border-white/10 pl-3 leading-none py-1">
+                   {p.title}
+                 </li>
+               ))}
+               {shopifyProducts.length === 0 && (
+                 <li className="text-[10px] text-amber-500 font-bold italic tracking-tight">Checking Shopify API...</li>
+               )}
+             </ul>
           </div>
         </div>
 
