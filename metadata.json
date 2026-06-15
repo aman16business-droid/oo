@@ -1,0 +1,6 @@
+{
+  "name": "SHADOW STORE",
+  "description": "Premium e-commerce platform SHADOW with highly accurate UI replicating sections like Hero, Split Categories, Banners, and Product Grids.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
