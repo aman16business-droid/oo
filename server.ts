@@ -7,61 +7,61 @@ dotenv.config();
 
 // Standardizing the shopify fetch for server-side use
 async function shopifyFetch({ query, variables }: { query: string; variables?: any }) {
-  const domain = process.env.VITE_SHOPIFY_STORE_DOMAIN || process.env.SHOPIFY_STORE_DOMAIN;
+  const domain = (process.env.VITE_SHOPIFY_STORE_DOMAIN || process.env.SHOPIFY_STORE_DOMAIN || '').replace(/^https?:\/\//, '').replace(/\/$/, '');
   const storefrontAccessToken = process.env.VITE_SHOPIFY_STOREFRONT_ACCESS_TOKEN || process.env.SHOPIFY_STORE_TOKEN;
 
   if (!domain || !storefrontAccessToken) {
-    return { status: 500, error: 'Shopify configuration missing' };
+    return { status: 500, error: 'Shopify configuration missing (domain or token)' };
   }
 
-  const isPrivate = storefrontAccessToken.startsWith('shpat_');
-  const headers: Record<string, string> = {
-    'Content-Type': 'application/json',
+  // Determine token type
+  const isPrivateToken = storefrontAccessToken.startsWith('shpat_');
+  
+  const attempt = async (headersToUse: Record<string, string>, currentUrl: string) => {
+    try {
+      const resp = await fetch(currentUrl, {
+        method: 'POST',
+        headers: headersToUse,
+        body: JSON.stringify({ query, variables }),
+        cache: 'no-store',
+      });
+      return resp;
+    } catch (e) {
+      return null;
+    }
   };
 
-  if (isPrivate) {
-    headers['Shopify-Storefront-Private-Token'] = storefrontAccessToken!;
-  } else {
-    headers['X-Shopify-Storefront-Access-Token'] = storefrontAccessToken!;
+  // Header strategies to try
+  const strategies = [
+    { name: 'Standard Storefront', headers: { 'X-Shopify-Storefront-Access-Token': storefrontAccessToken! }, endpoint: `/api/2024-07/graphql.json` },
+    { name: 'Private Storefront', headers: { 'Shopify-Storefront-Private-Token': storefrontAccessToken! }, endpoint: `/api/2024-07/graphql.json` },
+    { name: 'Admin API', headers: { 'X-Shopify-Access-Token': storefrontAccessToken! }, endpoint: `/admin/api/2024-07/graphql.json` }
+  ];
+
+  // If it's explicitly a shpat_ token, prioritize Private or Admin strategies
+  if (isPrivateToken) {
+    strategies.unshift(strategies.pop()!); // Move Admin API to front
   }
 
-  // Try both Storefront and Admin endpoints if one fails? 
-  // No, let's stick to the user's provided domain and token type.
-  const url = `https://${domain}/api/2024-07/graphql.json`;
-
-  try {
-    const result = await fetch(url, {
-      method: 'POST',
-      headers,
-      body: JSON.stringify({ query, variables }),
-      cache: 'no-store',
-    });
-
-    if (!result.ok) {
-      // Fallback for Admin Token if the user provided one but named it Storefront Token
-      if (result.status === 401 || result.status === 403) {
-        const adminUrl = `https://${domain}/admin/api/2024-07/graphql.json`;
-        const adminResult = await fetch(adminUrl, {
-          method: 'POST',
-          headers: {
-            ...headers,
-            'X-Shopify-Access-Token': storefrontAccessToken!,
-          },
-          body: JSON.stringify({ query, variables }),
-        });
-        if (adminResult.ok) {
-          const json = await adminResult.json();
-          return { status: adminResult.status, body: json };
-        }
+  for (const strategy of strategies) {
+    const fullUrl = `https://${domain}${strategy.endpoint}`;
+    console.log(`[Shopify Audit] Trying strategy: ${strategy.name} for ${domain}`);
+    
+    const result = await attempt({ ...strategy.headers, 'Content-Type': 'application/json' }, fullUrl);
+    
+    if (result && result.ok) {
+      const json = await result.json();
+      if (!json.errors) {
+        console.log(`[Shopify Audit] SUCCESS using strategy: ${strategy.name}`);
+        return { status: 200, body: json };
       }
-      return { status: result.status, error: `Shopify API error: ${result.status}` };
+      console.warn(`[Shopify Audit] Strategy ${strategy.name} failed with GraphQL errors.`);
+    } else if (result) {
+      console.warn(`[Shopify Audit] Strategy ${strategy.name} failed with status: ${result.status}`);
     }
-
-    const json = await result.json();
-    return { status: result.status, body: json };
-  } catch (error: any) {
-    return { status: 500, error: error.message };
   }
+
+  return { status: 401, error: 'All authentication strategies failed. Please verify your Shopify domain and token permissions.' };
 }
 
 async function startServer() {

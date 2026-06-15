@@ -28,9 +28,9 @@ export default function Footer() {
                <div className="flex items-center gap-2">
                  <span className="text-[10px] font-black text-gray-400 gap-2 uppercase tracking-widest flex items-center">
                    {shopifyProducts.length > 0 ? (
-                     <span className="text-white">STATUS: SYNCED</span>
+                     <span className="text-green-500 flex items-center gap-1.5"><div className="w-1.5 h-1.5 rounded-full bg-green-500"></div> LIVE SCAN: OK</span>
                    ) : (
-                     <span className="text-amber-500">STATUS: EMPTY</span>
+                     <span className="text-amber-500 animate-pulse">SCANNING CATALOG...</span>
                    )}
                  </span>
                </div>
@@ -40,15 +40,24 @@ export default function Footer() {
                  className="p-1 hover:bg-white/10 rounded transition-colors disabled:opacity-30 flex items-center gap-1"
                  title="Force Resync"
                >
-                 <span className="text-[8px] uppercase font-bold text-gray-500">Refresh</span>
                  <RefreshCw size={10} className={isLoading ? 'animate-spin' : ''} />
                </button>
              </div>
-             <p className="text-[9px] text-gray-600 mb-4 font-mono leading-tight">
-               Count: {shopifyProducts.length} items<br/>
-               Store: {import.meta.env.VITE_SHOPIFY_STORE_DOMAIN || 'Not set'}<br/>
-               Sync: {new Date().toLocaleTimeString()}
-             </p>
+           <div className="text-[9px] text-gray-600 mb-4 font-mono leading-tight">
+               Store: {import.meta.env.VITE_SHOPIFY_STORE_DOMAIN || 'Missing Domain'}<br/>
+               Items: {shopifyProducts.length}<br/>
+               {shopifyProducts.length === 0 && !isLoading && (
+                 <span className="text-red-500 font-bold block mt-1">CATALOG EMPTY</span>
+               )}
+               {shopifyProducts.length === 0 && !isLoading && (
+               <div className="text-[7.5px] text-gray-500 block mt-2 leading-[1.4]">
+                    <span className="text-white font-bold">FIX:</span> Go to Settings. <br/>
+                    1. Use Domain: <span className="text-amber-400">shadowshopp.myshopify.com</span><br/>
+                    2. Use <span className="text-amber-400">Public access token</span> from "Storefront API" tab.<br/>
+                    3. Do <span className="text-red-400 italic">NOT</span> use the "Client ID".
+                </div>
+               )}
+           </div>
              <ul className="space-y-2">
                {shopifyProducts.slice(0, 6).map(p => (
                  <li key={p.id} className="text-[10px] text-gray-500 font-medium truncate border-l border-white/10 pl-3 leading-none py-1 group/item">

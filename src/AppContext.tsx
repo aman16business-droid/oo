@@ -100,41 +100,43 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setConnectionStatus('loading');
     try {
       const { getAllProducts, getShop } = await import('./lib/shopify');
+      console.log(`[Shopify Audit] SYNC START - Looking for Store: ${import.meta.env.VITE_SHOPIFY_STORE_DOMAIN || 'NOT SET'}`);
       console.log('INITIATING LIVE SHOPIFY AUDIT...', new Date().toISOString());
       
       const shop = await getShop();
       if (shop) {
         console.log(`[Shopify Audit] CONNECTED TO SHOP: ${shop.name}`);
       } else {
-        console.error('[Shopify Audit] FAILED TO FETCH SHOP INFO. Check token permissions.');
+        console.warn('[Shopify Audit] Could not fetch shop info. Token might be restricted.');
       }
 
       const edges = await getAllProducts();
       
       if (!edges || edges.length === 0) {
-        console.warn('SHOPIFY API RETURNED 0 PRODUCTS. Check product status in Shopify Admin.');
+        console.warn('SHOPIFY API RETURNED 0 PRODUCTS. Checking for server-side error...');
+        // If we got back 0 but reached the server, maybe there's an error message inside
       }
 
       const formatted: Product[] = edges.map(({ node }: any) => {
-        const isAvailable = node.variants.edges.some((edge: any) => edge.node.availableForSale);
-        const imagesArr = node.images.edges.map((e: any) => e.node.url);
+        const isAvailable = node.variants?.edges?.some((edge: any) => edge.node.availableForSale) || false;
+        const imagesArr = node.images?.edges?.map((e: any) => e.node.url) || [];
         
         return {
           id: node.id,
           title: node.title,
           handle: node.handle,
-          description: node.description,
+          description: node.description || '',
           image: imagesArr[0] || '',
           images: imagesArr,
-          originalPrice: node.compareAtPriceRange?.minVariantPrice.amount || node.priceRange.minVariantPrice.amount,
-          salePrice: node.priceRange.minVariantPrice.amount,
-          savePercentage: node.compareAtPriceRange?.minVariantPrice.amount ?
+          originalPrice: node.compareAtPriceRange?.minVariantPrice?.amount || node.priceRange?.minVariantPrice?.amount || '0',
+          salePrice: node.priceRange?.minVariantPrice?.amount || '0',
+          savePercentage: node.compareAtPriceRange?.minVariantPrice?.amount ? 
             Math.round((1 - (parseFloat(node.priceRange.minVariantPrice.amount) / parseFloat(node.compareAtPriceRange.minVariantPrice.amount))) * 100).toString() + '%'
             : '0%',
-          inventory: 0, // Simplified: assume 1 if available, 0 if not, or just use available boolean
+          inventory: 0,
           available: isAvailable,
-          variants: node.variants.edges.map((v: any) => v.node),
-          collections: node.collections.edges.map((c: any) => c.node.handle),
+          variants: node.variants?.edges?.map((v: any) => v.node) || [],
+          collections: node.collections?.edges?.map((c: any) => c.node.handle) || [],
           createdAt: node.createdAt
         };
       });
@@ -145,15 +147,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         Collections: p.collections.join(', '), 
         Price: p.salePrice,
         Available: p.available,
-        Created: p.createdAt
+        Date: p.createdAt
       })));
-      console.log(`TOTAL PRODUCTS FETCHED: ${formatted.length}`);
 
       setShopifyProducts(formatted);
       setConnectionStatus('connected');
-      console.log(`AUDIT COMPLETE: ${formatted.length} products loaded dynamically.`);
     } catch (error) {
-      console.error('Failed live Shopify fetch:', error);
+      console.error('AppContext initShopify error:', error);
       setConnectionStatus('error');
     } finally {
       setIsLoading(false);
