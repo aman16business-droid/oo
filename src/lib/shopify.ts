@@ -10,6 +10,7 @@ if (!domain || !storefrontAccessToken) {
 
 async function shopifyFetch({ query, variables }: { query: string; variables?: any }) {
   if (!domain || !storefrontAccessToken) {
+    console.error('[Shopify Audit] Configuration missing.');
     return { status: 500, error: 'Shopify configuration missing' };
   }
   try {
@@ -19,35 +20,53 @@ async function shopifyFetch({ query, variables }: { query: string; variables?: a
     };
 
     if (isPrivate) {
-      // Private Storefront Token (for server-side or advanced apps)
       headers['Shopify-Storefront-Private-Token'] = storefrontAccessToken!;
     } else {
-      // Standard Public Storefront Token
       headers['X-Shopify-Storefront-Access-Token'] = storefrontAccessToken!;
     }
 
-    console.log(`[Shopify Audit] Fetching from ${domain}...`);
-    console.log(`[Shopify Audit] Using ${isPrivate ? 'Private' : 'Public'} Token.`);
+    // Use a unique cache-busting parameter and no-store to force fresh data from Shopify's edge
+    const cacheBuster = `cb=${Date.now()}`;
+    const url = `https://${domain}/api/2024-01/graphql.json?${cacheBuster}`;
 
-    const result = await fetch(`https://${domain}/api/2024-01/graphql.json`, {
+    console.log(`[Shopify Audit] Fetching LIVE from: ${url}`);
+
+    const result = await fetch(url, {
       method: 'POST',
       headers,
       body: JSON.stringify({ query, variables }),
-      cache: 'no-cache',
+      cache: 'no-store', // Force browser to bypass cache
     });
 
     if (!result.ok) {
       const errorText = await result.text();
       console.error('[Shopify Audit] HTTP Error:', result.status, errorText);
+      
+      // Fallback for some Shopify apps that use X-Shopify-Access-Token instead for Storefront
+      if (result.status === 401) {
+        console.warn('[Shopify Audit] 401 detected. Trying fallback header X-Shopify-Access-Token...');
+        const retryResult = await fetch(url, {
+          method: 'POST',
+          headers: {
+            ...headers,
+            'X-Shopify-Access-Token': storefrontAccessToken!,
+          },
+          body: JSON.stringify({ query, variables }),
+          cache: 'no-store',
+        });
+        if (retryResult.ok) {
+          const json = await retryResult.json();
+          return { status: retryResult.status, body: json };
+        }
+      }
+      
       throw new Error(`Shopify API error: ${result.status}`);
     }
 
     const json = await result.json();
     
     if (json.errors) {
-      console.error('[Shopify Audit] GraphQL Errors:', json.errors);
-    } else {
-      console.log('[Shopify Audit] Successfully received data:', !!json.data);
+      console.error('[Shopify Audit] GraphQL Errors:', JSON.stringify(json.errors, null, 2));
     }
 
     return {

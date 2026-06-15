@@ -128,6 +128,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             collections: node.collections.edges.map((c: any) => c.node.handle)
           };
         });
+
+        console.log('--- SHOPIFY LIVE PRODUCT AUDIT ---');
+        console.table(formatted.map(p => ({ 
+          Title: p.title, 
+          Collections: p.collections.join(', '), 
+          Price: p.salePrice,
+          Available: p.available
+        })));
+        console.log(`TOTAL PRODUCTS FETCHED: ${formatted.length}`);
+
         setShopifyProducts(formatted);
         setConnectionStatus('connected');
         console.log(`AUDIT COMPLETE: ${formatted.length} products loaded dynamically.`);
