@@ -11,7 +11,7 @@ export const ProductCard: React.FC<{ product: Product, onAddToCart: (p: Product)
     <div className="group/card relative cursor-pointer flex flex-col" onClick={() => onViewProduct(product)}>
       <div className="relative bg-[#f5f5f5] aspect-[3/4] mb-3 sm:mb-4 overflow-hidden flex items-center justify-center rounded-sm">
         <img 
-          src={product.image} 
+          src={product.image || 'https://images.unsplash.com/photo-1594932224011-042041c6543b?q=80&w=800&auto=format&fit=crop'} 
           alt={product.title}
           className="h-full w-full object-cover mix-blend-multiply transition-transform duration-700 group-hover/card:scale-110" 
         />
@@ -82,19 +82,19 @@ export default function ProductSections() {
   // Segment products based on collections if possible, otherwise use the most recent items as fallback
   const newInItems = shopifyProducts.filter(p => p.collections.includes('new-arrivals')).length > 0
     ? shopifyProducts.filter(p => p.collections.includes('new-arrivals')).slice(0, 8)
-    : shopifyProducts.slice(0, 4);
+    : shopifyProducts.slice(0, 8);
 
   const bestSellerItems = shopifyProducts.filter(p => p.collections.includes('best-sellers')).length > 0
     ? shopifyProducts.filter(p => p.collections.includes('best-sellers')).slice(0, 8)
-    : shopifyProducts.slice(4, 8);
+    : shopifyProducts.slice(8, 16).length > 0 ? shopifyProducts.slice(8, 16) : shopifyProducts.slice(0, 4);
 
   const mensItems = shopifyProducts.filter(p => p.collections.includes('men') || p.collections.includes('mens')).length > 0
     ? shopifyProducts.filter(p => p.collections.includes('men') || p.collections.includes('mens')).slice(0, 8)
-    : shopifyProducts.filter(p => p.title.toLowerCase().includes('men')).slice(0, 4);
+    : shopifyProducts.filter(p => p.title.toLowerCase().includes('men')).slice(0, 8);
 
   const womensItems = shopifyProducts.filter(p => p.collections.includes('women') || p.collections.includes('womens')).length > 0
     ? shopifyProducts.filter(p => p.collections.includes('women') || p.collections.includes('womens')).slice(0, 8)
-    : shopifyProducts.filter(p => p.title.toLowerCase().includes('women')).slice(0, 4);
+    : shopifyProducts.filter(p => p.title.toLowerCase().includes('women')).slice(0, 8);
 
   return (
     <div className="py-16 bg-white overflow-hidden">
@@ -107,9 +107,12 @@ export default function ProductSections() {
                <h2 className="text-[2.25rem] font-bold text-gray-900 mb-1 tracking-tight">New In</h2>
                <p className="text-gray-600 text-[15px]">Upgrade your closet with everything trendy and new</p>
              </div>
-             <a href="#" className="hidden md:inline-block text-sm font-bold uppercase border-b-[2.5px] border-black pb-0.5 tracking-wider hover:text-gray-600 hover:border-gray-600 transition">
+             <button 
+               onClick={() => setCurrentView('new-arrivals')}
+               className="hidden md:inline-block text-sm font-bold uppercase border-b-[2.5px] border-black pb-0.5 tracking-wider hover:text-gray-600 hover:border-gray-600 transition cursor-pointer"
+             >
                Shop New Arrivals
-             </a>
+             </button>
           </div>
           
           <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-4 gap-x-6 gap-y-12">
@@ -128,9 +131,12 @@ export default function ProductSections() {
                <h2 className="text-[2.25rem] font-bold text-gray-900 mb-1 tracking-tight">Best Seller</h2>
                <p className="text-gray-600 text-[15px]">Handpicked and crafted for you</p>
              </div>
-             <a href="#" className="hidden md:inline-block text-sm font-bold uppercase border-b-[2.5px] border-black pb-0.5 tracking-wider hover:text-gray-600 hover:border-gray-600 transition">
+             <button 
+               onClick={() => setCurrentView('shop-all')}
+               className="hidden md:inline-block text-sm font-bold uppercase border-b-[2.5px] border-black pb-0.5 tracking-wider hover:text-gray-600 hover:border-gray-600 transition cursor-pointer"
+             >
                Shop BEST SELLERS
-             </a>
+             </button>
           </div>
           
           <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-4 gap-x-6 gap-y-12">
@@ -149,9 +155,12 @@ export default function ProductSections() {
                <h2 className="text-[2.25rem] font-bold text-gray-900 mb-1 tracking-tight">Shop Mens</h2>
                <p className="text-gray-600 text-[15px]">The ultimate collection for him</p>
              </div>
-             <a href="#" className="hidden md:inline-block text-sm font-bold uppercase border-b-[2.5px] border-black pb-0.5 tracking-wider hover:text-gray-600 hover:border-gray-600 transition">
+             <button 
+               onClick={() => setCurrentView('men-wear')}
+               className="hidden md:inline-block text-sm font-bold uppercase border-b-[2.5px] border-black pb-0.5 tracking-wider hover:text-gray-600 hover:border-gray-600 transition cursor-pointer"
+             >
                Shop Mens Collection
-             </a>
+             </button>
           </div>
           
           <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-4 gap-x-6 gap-y-12">
@@ -176,9 +185,12 @@ export default function ProductSections() {
           <h2 className="text-white text-[2.5rem] md:text-[4.5rem] font-bold tracking-tight text-center leading-none uppercase">
             DISCOVER WHAT'S NEW
           </h2>
-          <a href="#" className="bg-white text-black font-semibold text-[14px] px-10 py-3.5 rounded-md hover:bg-gray-100 transition tracking-wide uppercase">
+          <button 
+            onClick={() => setCurrentView('shop-all')}
+            className="bg-white text-black font-semibold text-[14px] px-10 py-3.5 rounded-md hover:bg-gray-100 transition tracking-wide uppercase cursor-pointer"
+          >
             EXPLORE
-          </a>
+          </button>
         </div>
       </section>
 
@@ -190,9 +202,12 @@ export default function ProductSections() {
                <h2 className="text-[2.25rem] font-bold text-gray-900 mb-1 tracking-tight">Shop Women</h2>
                <p className="text-gray-600 text-[15px]">The ultimate collection for her</p>
              </div>
-             <a href="#" className="hidden md:inline-block text-sm font-bold uppercase border-b-[2.5px] border-black pb-0.5 tracking-wider hover:text-gray-600 hover:border-gray-600 transition">
+             <button 
+               onClick={() => setCurrentView('women-wear')}
+               className="hidden md:inline-block text-sm font-bold uppercase border-b-[2.5px] border-black pb-0.5 tracking-wider hover:text-gray-600 hover:border-gray-600 transition cursor-pointer"
+             >
                Shop Womens Collection
-             </a>
+             </button>
           </div>
           
           <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-4 gap-x-6 gap-y-12">

@@ -15,7 +15,7 @@ export default function QuickAddDrawer() {
   } = useAppContext();
 
   const availableSizes = quickAddProduct?.variants ? [...new Set(quickAddProduct.variants.map((v: any) => {
-    const sizeOpt = v.selectedOptions.find((o: any) => o.name.toLowerCase() === 'size' || o.name.toLowerCase() === 'title');
+    const sizeOpt = v.selectedOptions?.find((o: any) => o.name?.toLowerCase() === 'size' || o.name?.toLowerCase() === 'title');
     return sizeOpt ? sizeOpt.value : null;
   }).filter(Boolean))] : [];
 
@@ -27,7 +27,7 @@ export default function QuickAddDrawer() {
   useEffect(() => {
     if (quickAddProduct) {
       const sizes = quickAddProduct.variants ? [...new Set(quickAddProduct.variants.map((v: any) => {
-        const sizeOpt = v.selectedOptions.find((o: any) => o.name.toLowerCase() === 'size' || o.name.toLowerCase() === 'title');
+        const sizeOpt = v.selectedOptions?.find((o: any) => o.name?.toLowerCase() === 'size' || o.name?.toLowerCase() === 'title');
         return sizeOpt ? sizeOpt.value : null;
       }).filter(Boolean))] : [];
       
@@ -133,7 +133,7 @@ export default function QuickAddDrawer() {
                           whileTap={{ scale: 0.95 }}
                           onClick={() => {
                             setSelectedSize(size);
-                            const variant = quickAddProduct.variants.find((v: any) => v.selectedOptions.some((o: any) => o.value === size));
+                            const variant = quickAddProduct.variants.find((v: any) => v.selectedOptions?.some((o: any) => o.value === size));
                             if (variant) setSelectedVariantId(variant.id);
                           }}
                           className={`min-w-[50px] px-3 h-12 flex items-center justify-center border text-[12px] font-bold tracking-widest uppercase rounded-sm transition-all ${selectedSize === size ? 'border-black bg-black text-white shadow-lg' : 'border-gray-200 text-gray-900 hover:border-gray-400'}`}

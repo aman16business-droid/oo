@@ -80,13 +80,43 @@ export default function Header() {
             <Menu size={24} strokeWidth={1.5} />
           </button>
           
-          <nav className="hidden md:flex items-center gap-6 text-[11px] font-semibold tracking-widest">
-            <a href="#" className="flex items-center gap-1.5 hover:opacity-70 transition">
-              WOMEN <span className="text-[8px] opacity-70">▼</span>
-            </a>
-            <a href="#" className="flex items-center gap-1.5 hover:opacity-70 transition">
-              MEN <span className="text-[8px] opacity-70">▼</span>
-            </a>
+          <nav className="hidden md:flex items-center gap-8 text-[11px] font-black tracking-widest">
+            <button 
+              onClick={() => {
+                setViewedProduct(null);
+                setCurrentView('women-wear');
+              }}
+              className="flex items-center gap-1.5 hover:text-[#df3333] transition cursor-pointer uppercase"
+            >
+              WOMEN
+            </button>
+            <button 
+              onClick={() => {
+                setViewedProduct(null);
+                setCurrentView('men-wear');
+              }}
+              className="flex items-center gap-1.5 hover:text-[#df3333] transition cursor-pointer uppercase"
+            >
+              MEN
+            </button>
+            <button 
+              onClick={() => {
+                setViewedProduct(null);
+                setCurrentView('new-arrivals');
+              }}
+              className="flex items-center gap-1.5 hover:text-[#df3333] transition cursor-pointer uppercase text-[#df3333]"
+            >
+              NEW IN
+            </button>
+            <button 
+              onClick={() => {
+                setViewedProduct(null);
+                setCurrentView('shop-all');
+              }}
+              className="flex items-center gap-1.5 hover:text-[#df3333] transition cursor-pointer uppercase opacity-60 hover:opacity-100"
+            >
+              SHOP ALL
+            </button>
           </nav>
         </div>
 
@@ -105,17 +135,6 @@ export default function Header() {
             </div>
             <div className="flex flex-col leading-none">
               <span className="text-xl md:text-2xl font-black tracking-[-0.05em] uppercase italic">SHADOW</span>
-            </div>
-          </div>
-          
-          {/* Shopify Audit Dot */}
-          <div className="relative group/status flex items-center mb-1">
-            <div className={`w-2 h-2 rounded-full shadow-[0_0_8px_rgba(0,0,0,0.1)] transition-colors duration-500 ${
-              connectionStatus === 'connected' ? 'bg-green-500 shadow-green-500/50' : 
-              connectionStatus === 'loading' ? 'bg-amber-400 animate-pulse' : 'bg-red-500 shadow-red-500/50'
-            }`} />
-            <div className="absolute left-full ml-2 hidden group-hover/status:block whitespace-nowrap bg-black text-white text-[8px] font-black tracking-[0.2em] uppercase px-2 py-1 rounded shadow-xl border border-white/10 z-[100]">
-              Shopify: {connectionStatus === 'connected' ? `${shopName || 'Live'} (${shopifyProducts.length} Prods)` : connectionStatus.toUpperCase()}
             </div>
           </div>
         </div>
@@ -171,10 +190,10 @@ export default function Header() {
               <div className="flex-1 overflow-y-auto px-6 py-8 flex flex-col gap-8">
                 <div className="flex flex-col gap-6">
                     <h4 className="text-[10px] font-black text-gray-400 tracking-widest uppercase">Categories</h4>
-                    <a href="#" className="text-2xl font-black tracking-tight hover:text-gray-500 transition">WOMEN</a>
-                    <a href="#" className="text-2xl font-black tracking-tight hover:text-gray-500 transition">MEN</a>
-                    <a href="#" className="text-2xl font-black tracking-tight hover:text-gray-500 transition">ACCESSORIES</a>
-                    <a href="#" onClick={() => { setIsMobileMenuOpen(false); setCurrentView('new-arrivals'); }} className="text-2xl font-black tracking-tight text-[#e33535] hover:opacity-80 transition">NEW IN</a>
+                    <button onClick={() => { setIsMobileMenuOpen(false); setViewedProduct(null); setCurrentView('women-wear'); }} className="text-2xl font-black tracking-tight hover:text-gray-500 transition text-left cursor-pointer">WOMEN</button>
+                    <button onClick={() => { setIsMobileMenuOpen(false); setViewedProduct(null); setCurrentView('men-wear'); }} className="text-2xl font-black tracking-tight hover:text-gray-500 transition text-left cursor-pointer">MEN</button>
+                    <button onClick={() => { setIsMobileMenuOpen(false); setViewedProduct(null); setCurrentView('shop-all'); }} className="text-2xl font-black tracking-tight hover:text-gray-500 transition text-left cursor-pointer uppercase opacity-60">CATALOG</button>
+                    <button onClick={() => { setIsMobileMenuOpen(false); setViewedProduct(null); setCurrentView('new-arrivals'); }} className="text-2xl font-black tracking-tight text-[#e33535] hover:opacity-80 transition text-left cursor-pointer">NEW IN</button>
                 </div>
                 <div className="mt-auto flex flex-col gap-4 border-t border-gray-100 pt-8">
                     <div className="flex items-center gap-3 text-sm font-bold opacity-70">

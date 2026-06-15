@@ -9,7 +9,7 @@ export default function ProductPage({ product }: { product: Product }) {
   const { addToCart, favorites, toggleFavorite, setViewedProduct, setCurrentView, recentlyViewed, openQuickAdd, setIsCartOpen, shopifyProducts, isLoading } = useAppContext();
   
   // Use first variant as default size if available
-  const initialSize = product.variants?.[0]?.selectedOptions?.find((o: any) => o.name.toLowerCase() === 'size')?.value || 'OS';
+  const initialSize = product.variants?.[0]?.selectedOptions?.find((o: any) => o.name?.toLowerCase() === 'size')?.value || 'OS';
   const [selectedSize, setSelectedSize] = useState(initialSize);
   const [selectedVariantId, setSelectedVariantId] = useState(product.variants?.[0]?.id);
   const [quantity, setQuantity] = useState(1);
@@ -29,8 +29,8 @@ export default function ProductPage({ product }: { product: Product }) {
   }
 
   // Get available sizes from variants
-  const availableSizes = [...new Set(product.variants.map((v: any) => {
-    const sizeOpt = v.selectedOptions.find((o: any) => o.name.toLowerCase() === 'size' || o.name.toLowerCase() === 'title');
+  const availableSizes = [...new Set((product.variants || []).map((v: any) => {
+    const sizeOpt = v.selectedOptions?.find((o: any) => o.name?.toLowerCase() === 'size' || o.name?.toLowerCase() === 'title');
     return sizeOpt ? sizeOpt.value : null;
   }).filter(Boolean))];
 

@@ -7,8 +7,8 @@ dotenv.config();
 
 // Standardizing the shopify fetch for server-side use
 async function shopifyFetch({ query, variables }: { query: string; variables?: any }) {
-  const domain = (process.env.VITE_SHOPIFY_STORE_DOMAIN || process.env.SHOPIFY_STORE_DOMAIN || '').replace(/^https?:\/\//, '').replace(/\/$/, '');
-  const storefrontAccessToken = process.env.VITE_SHOPIFY_STOREFRONT_ACCESS_TOKEN || process.env.SHOPIFY_STORE_TOKEN;
+  const storefrontAccessToken = (process.env.VITE_SHOPIFY_STOREFRONT_ACCESS_TOKEN || process.env.SHOPIFY_STORE_TOKEN || '').trim();
+  const domain = (process.env.VITE_SHOPIFY_STORE_DOMAIN || process.env.SHOPIFY_STORE_DOMAIN || '').replace(/^https?:\/\//, '').replace(/\/$/, '').trim();
 
   if (!domain || !storefrontAccessToken) {
     return { status: 500, error: 'Shopify configuration missing (domain or token)' };
@@ -16,6 +16,11 @@ async function shopifyFetch({ query, variables }: { query: string; variables?: a
 
   // Determine token type
   const isPrivateToken = storefrontAccessToken.startsWith('shpat_');
+  const isClientId = storefrontAccessToken.includes('-') && storefrontAccessToken.length > 20;
+
+  if (isClientId) {
+    console.error('[Shopify Audit] DETECTED CLIENT ID instead of ACCESS TOKEN. This will cause 401 errors.');
+  }
   
   const attempt = async (headersToUse: Record<string, string>, currentUrl: string) => {
     try {
@@ -27,21 +32,30 @@ async function shopifyFetch({ query, variables }: { query: string; variables?: a
       });
       return resp;
     } catch (e) {
+      console.error(`[Shopify Audit] Fetch exception for ${currentUrl}:`, e);
       return null;
     }
   };
 
   // Header strategies to try
   const strategies = [
-    { name: 'Standard Storefront', headers: { 'X-Shopify-Storefront-Access-Token': storefrontAccessToken! }, endpoint: `/api/2024-07/graphql.json` },
-    { name: 'Private Storefront', headers: { 'Shopify-Storefront-Private-Token': storefrontAccessToken! }, endpoint: `/api/2024-07/graphql.json` },
-    { name: 'Admin API', headers: { 'X-Shopify-Access-Token': storefrontAccessToken! }, endpoint: `/admin/api/2024-07/graphql.json` }
+    { name: 'Storefront (Public)', headers: { 'X-Shopify-Storefront-Access-Token': storefrontAccessToken! }, endpoint: `/api/2024-07/graphql.json` },
+    { name: 'Storefront (Private)', headers: { 'Shopify-Storefront-Private-Token': storefrontAccessToken! }, endpoint: `/api/2024-07/graphql.json` },
+    { name: 'Storefront (Legacy)', headers: { 'X-Shopify-Access-Token': storefrontAccessToken! }, endpoint: `/api/2024-07/graphql.json` },
+    { name: 'Admin API', headers: { 'X-Shopify-Access-Token': storefrontAccessToken! }, endpoint: `/admin/api/2024-07/graphql.json` },
+    { name: 'Bearer Auth', headers: { 'Authorization': `Bearer ${storefrontAccessToken}` }, endpoint: `/api/2024-07/graphql.json` }
   ];
 
-  // If it's explicitly a shpat_ token, prioritize Private or Admin strategies
+  // Optimization: If it's a private token (shpat_), prioritize Private or Admin strategies
   if (isPrivateToken) {
-    strategies.unshift(strategies.pop()!); // Move Admin API to front
+    // Reorder: Private -> Admin -> others
+    const p = strategies.splice(1, 1)[0];
+    const a = strategies.pop()!;
+    strategies.unshift(a);
+    strategies.unshift(p);
   }
+
+  console.log(`[Shopify Audit] Starting auth sequence for ${domain}. Token type: ${isPrivateToken ? 'PRIVATE' : 'PUBLIC/OTHER'}`);
 
   for (const strategy of strategies) {
     const fullUrl = `https://${domain}${strategy.endpoint}`;
@@ -55,9 +69,13 @@ async function shopifyFetch({ query, variables }: { query: string; variables?: a
         console.log(`[Shopify Audit] SUCCESS using strategy: ${strategy.name}`);
         return { status: 200, body: json };
       }
-      console.warn(`[Shopify Audit] Strategy ${strategy.name} failed with GraphQL errors.`);
+      console.warn(`[Shopify Audit] Strategy ${strategy.name} failed with GraphQL errors:`, JSON.stringify(json.errors, null, 2));
     } else if (result) {
       console.warn(`[Shopify Audit] Strategy ${strategy.name} failed with status: ${result.status}`);
+      try {
+        const errText = await result.text();
+        console.warn(`[Shopify Audit] Response body:`, errText.slice(0, 200));
+      } catch (e) {}
     }
   }
 
@@ -110,6 +128,10 @@ async function startServer() {
                     availableForSale
                     price {
                       amount
+                    }
+                    selectedOptions {
+                      name
+                      value
                     }
                   }
                 }

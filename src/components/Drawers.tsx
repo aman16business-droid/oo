@@ -216,7 +216,7 @@ export default function Drawers() {
                                   >
                                     {item.variants?.length > 0 ? (
                                       [...new Set(item.variants.map((v: any) => {
-                                        const sizeOpt = v.selectedOptions.find((o: any) => o.name.toLowerCase() === 'size' || o.name.toLowerCase() === 'title');
+                                        const sizeOpt = v.selectedOptions?.find((o: any) => o.name?.toLowerCase() === 'size' || o.name?.toLowerCase() === 'title');
                                         return sizeOpt ? sizeOpt.value : null;
                                       }).filter(Boolean))].map(s => (
                                         <option key={s} value={s}>{s}</option>
