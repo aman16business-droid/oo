@@ -6,7 +6,7 @@ import { useAppContext } from '../AppContext';
 export default function Header() {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const { cart, favorites, setIsCartOpen, setIsFavOpen, setIsSearchOpen, setViewedProduct, viewedProduct, currentView, setCurrentView } = useAppContext();
+  const { cart, favorites, setIsCartOpen, setIsFavOpen, setIsSearchOpen, setViewedProduct, viewedProduct, currentView, setCurrentView, connectionStatus } = useAppContext();
 
   useEffect(() => {
     const handleScroll = () => {
@@ -82,19 +82,32 @@ export default function Header() {
         </div>
 
         {/* Center Logo */}
-        <div 
-          className="flex items-center gap-2 cursor-pointer group shrink-0"
-          onClick={() => {
-            setViewedProduct(null);
-            setCurrentView('old-home');
-          }}
-        >
-          <div className="relative flex items-center justify-center">
-            <Eclipse size={28} className="text-current group-hover:rotate-180 transition-transform duration-700 ease-in-out" strokeWidth={2.5} />
-            <div className="absolute inset-0 bg-current opacity-0 group-hover:opacity-10 blur-md rounded-full transition-opacity" />
+        <div className="flex items-center gap-3 md:gap-5 shrink-0">
+          <div 
+            className="flex items-center gap-2 cursor-pointer group"
+            onClick={() => {
+              setViewedProduct(null);
+              setCurrentView('old-home');
+            }}
+          >
+            <div className="relative flex items-center justify-center">
+              <Eclipse size={28} className="text-current group-hover:rotate-180 transition-transform duration-700 ease-in-out" strokeWidth={2.5} />
+              <div className="absolute inset-0 bg-current opacity-0 group-hover:opacity-10 blur-md rounded-full transition-opacity" />
+            </div>
+            <div className="flex flex-col leading-none">
+              <span className="text-xl md:text-2xl font-black tracking-[-0.05em] uppercase italic">SHADOW</span>
+            </div>
           </div>
-          <div className="flex flex-col leading-none">
-            <span className="text-xl md:text-2xl font-black tracking-[-0.05em] uppercase italic">SHADOW</span>
+          
+          {/* Shopify Audit Dot */}
+          <div className="relative group/status flex items-center mb-1">
+            <div className={`w-2 h-2 rounded-full shadow-[0_0_8px_rgba(0,0,0,0.1)] transition-colors duration-500 ${
+              connectionStatus === 'connected' ? 'bg-green-500 shadow-green-500/50' : 
+              connectionStatus === 'loading' ? 'bg-amber-400 animate-pulse' : 'bg-red-500 shadow-red-500/50'
+            }`} />
+            <div className="absolute left-full ml-2 hidden group-hover/status:block whitespace-nowrap bg-black text-white text-[8px] font-black tracking-[0.2em] uppercase px-2 py-1 rounded shadow-xl border border-white/10 z-[100]">
+              Shopify: {connectionStatus === 'connected' ? 'Live' : connectionStatus.toUpperCase()}
+            </div>
           </div>
         </div>
 

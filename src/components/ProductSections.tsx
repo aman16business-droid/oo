@@ -79,22 +79,11 @@ export default function ProductSections() {
     );
   }
 
-  // Segment products based on collections if possible, otherwise slice
-  const newInItems = shopifyProducts.filter(p => p.collections.includes('new-arrivals')).length > 0
-    ? shopifyProducts.filter(p => p.collections.includes('new-arrivals')).slice(0, 4)
-    : shopifyProducts.slice(0, 4);
-
-  const bestSellerItems = shopifyProducts.filter(p => p.collections.includes('best-sellers')).length > 0
-    ? shopifyProducts.filter(p => p.collections.includes('best-sellers')).slice(0, 4)
-    : shopifyProducts.slice(4, 9);
-
-  const mensItems = shopifyProducts.filter(p => p.collections.includes('men') || p.collections.includes('mens')).length > 0
-    ? shopifyProducts.filter(p => p.collections.includes('men') || p.collections.includes('mens')).slice(0, 4)
-    : shopifyProducts.slice(8, 13);
-
-  const womensItems = shopifyProducts.filter(p => p.collections.includes('women') || p.collections.includes('womens')).length > 0
-    ? shopifyProducts.filter(p => p.collections.includes('women') || p.collections.includes('womens')).slice(0, 4)
-    : shopifyProducts.slice(12, 17);
+  // Segment products based on collections if possible
+  const newInItems = shopifyProducts.filter(p => p.collections.includes('new-arrivals')).slice(0, 8);
+  const bestSellerItems = shopifyProducts.filter(p => p.collections.includes('best-sellers')).slice(0, 8);
+  const mensItems = shopifyProducts.filter(p => p.collections.includes('men') || p.collections.includes('mens')).slice(0, 8);
+  const womensItems = shopifyProducts.filter(p => p.collections.includes('women') || p.collections.includes('womens')).slice(0, 8);
 
   return (
     <div className="py-16 bg-white overflow-hidden">

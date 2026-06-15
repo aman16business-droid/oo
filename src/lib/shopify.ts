@@ -4,24 +4,28 @@ const storefrontAccessToken = import.meta.env.VITE_SHOPIFY_STOREFRONT_ACCESS_TOK
 
 async function shopifyFetch({ query, variables }: { query: string; variables?: any }) {
   try {
-    const result = await fetch(`https://${domain}/api/2024-01/graphql.json`, {
+    const result = await fetch(`https://${domain}/api/2024-01/graphql.json?cb=${Date.now()}`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'X-Shopify-Storefront-Access-Token': storefrontAccessToken,
       },
       body: JSON.stringify({ query, variables }),
-      cache: 'no-store', // Ensure we always get live data
+      cache: 'no-cache', // Prevents even browser-level caching
     });
 
     if (!result.ok) {
       const errorText = await result.text();
+      console.error('SHOPIFY API RAW ERROR:', result.status, errorText);
       throw new Error(`Shopify API error: ${result.status} ${errorText}`);
     }
 
+    const json = await result.json();
+    console.log('SHOPIFY LIVE RESPONSE:', json);
+
     return {
       status: result.status,
-      body: await result.json(),
+      body: json,
     };
   } catch (error) {
     console.error('Error fetching from Shopify:', error);

@@ -60,6 +60,7 @@ interface AppContextType {
   setCurrentView: (view: ViewType) => void;
   shopifyProducts: Product[];
   isLoading: boolean;
+  connectionStatus: 'connected' | 'error' | 'loading';
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -80,22 +81,30 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const [quickAddProduct, setQuickAddProduct] = useState<Product | null>(null);
   const [isQuickAddOpen, setIsQuickAddOpen] = useState(false);
+  const [shopifyProducts, setShopifyProducts] = useState<Product[]>([]);
+  const [currentView, setCurrentView] = useState<ViewType>('new-arrivals');
 
   const openQuickAdd = (product: Product) => {
     setQuickAddProduct(product);
     setIsQuickAddOpen(true);
   };
 
-  const [currentView, setCurrentView] = useState<ViewType>('new-arrivals');
-  const [shopifyProducts, setShopifyProducts] = useState<Product[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [connectionStatus, setConnectionStatus] = useState<'connected' | 'error' | 'loading'>('loading');
 
   React.useEffect(() => {
     async function initShopify() {
       setIsLoading(true);
+      setConnectionStatus('loading');
       try {
         const { getAllProducts } = await import('./lib/shopify');
+        console.log('INITIATING LIVE SHOPIFY AUDIT...', new Date().toISOString());
         const edges = await getAllProducts();
+        
+        if (!edges || edges.length === 0) {
+          console.warn('SHOPIFY API RETURNED 0 PRODUCTS. Check product status in Shopify Admin.');
+        }
+
         const formatted: Product[] = edges.map(({ node }: any) => {
           const totalInventory = node.variants.edges.reduce((acc: number, edge: any) => acc + (edge.node.quantityAvailable || 0), 0);
           const isAvailable = node.variants.edges.some((edge: any) => edge.node.availableForSale);
@@ -120,8 +129,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           };
         });
         setShopifyProducts(formatted);
+        setConnectionStatus('connected');
+        console.log(`AUDIT COMPLETE: ${formatted.length} products loaded dynamically.`);
       } catch (error) {
-        console.error('Failed to fetch Shopify products:', error);
+        console.error('Failed live Shopify fetch:', error);
+        setConnectionStatus('error');
       } finally {
         setIsLoading(false);
       }
@@ -219,6 +231,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         setCurrentView,
         shopifyProducts,
         isLoading,
+        connectionStatus,
       }}
     >
       {children}
