@@ -112,16 +112,24 @@ export default function NewArrivalsPage() {
 
       {/* Product Grid */}
       <div className="max-w-[1600px] mx-auto px-6 py-8">
-        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-4 gap-x-6 gap-y-12">
-          {displayProducts.map((product) => (
-            <ProductCard 
-              key={product.id} 
-              product={product} 
-              onAddToCart={openQuickAdd} 
-              onViewProduct={setViewedProduct} 
-            />
-          ))}
-        </div>
+        {displayProducts.length > 0 ? (
+          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-4 gap-x-6 gap-y-12">
+            {displayProducts.map((product) => (
+              <ProductCard 
+                key={product.id} 
+                product={product} 
+                onAddToCart={openQuickAdd} 
+                onViewProduct={setViewedProduct} 
+              />
+            ))}
+          </div>
+        ) : (
+          <div className="flex flex-col items-center justify-center py-20 text-gray-400">
+            <Shirt size={48} className="mb-4 opacity-20" />
+            <p className="text-sm font-medium tracking-widest uppercase">No products found in Catalog</p>
+            <p className="text-[10px] mt-2 opacity-60">Check Shopify Admin to ensure products are active and published to Headless.</p>
+          </div>
+        )}
       </div>
       
       {/* Floating Action Button */}

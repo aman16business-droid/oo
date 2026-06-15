@@ -1,8 +1,8 @@
-import { Facebook, Twitter, Instagram, Youtube, Eclipse } from 'lucide-react';
+import { Facebook, Twitter, Instagram, Youtube, Eclipse, RefreshCw } from 'lucide-react';
 import { useAppContext } from '../AppContext';
 
 export default function Footer() {
-  const { shopifyProducts } = useAppContext();
+  const { shopifyProducts, refreshProducts, isLoading } = useAppContext();
   return (
     <footer className="bg-[#111111] text-white py-20 px-8 text-sm pt-24 font-sans tracking-wide">
       <div className="max-w-[1600px] mx-auto grid grid-cols-1 md:grid-cols-5 gap-12 lg:gap-8">
@@ -24,18 +24,33 @@ export default function Footer() {
           
           {/* Shopify Live Audit Feed */}
           <div className="mt-14 pt-8 border-t border-white/5 max-w-[200px]">
-             <div className="flex items-center gap-2 mb-4">
-               <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></div>
-               <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Shopify Feed Audit</span>
+             <div className="flex items-center justify-between gap-2 mb-4">
+               <div className="flex items-center gap-2">
+                 <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></div>
+                 <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Shopify: {shopifyProducts.length} Items</span>
+               </div>
+               <button 
+                 onClick={() => refreshProducts()} 
+                 disabled={isLoading}
+                 className="p-1 hover:bg-white/10 rounded transition-colors disabled:opacity-30"
+                 title="Force Resync"
+               >
+                 <RefreshCw size={10} className={isLoading ? 'animate-spin' : ''} />
+               </button>
              </div>
+             <p className="text-[9px] text-gray-600 mb-4 font-mono leading-tight">
+               Last Sync: {new Date().toLocaleTimeString()}<br/>
+               Store: {import.meta.env.VITE_SHOPIFY_STORE_DOMAIN || 'Not set'}<br/>
+               Token: {import.meta.env.VITE_SHOPIFY_STOREFRONT_ACCESS_TOKEN ? import.meta.env.VITE_SHOPIFY_STOREFRONT_ACCESS_TOKEN.substring(0, 4) + '...' : 'Missing'}
+             </p>
              <ul className="space-y-2">
-               {shopifyProducts.slice(0, 5).map(p => (
-                 <li key={p.id} className="text-[10px] text-gray-500 font-medium truncate border-l border-white/10 pl-3 leading-none py-1">
-                   {p.title}
+               {shopifyProducts.slice(0, 6).map(p => (
+                 <li key={p.id} className="text-[10px] text-gray-500 font-medium truncate border-l border-white/10 pl-3 leading-none py-1 group/item">
+                   <span className="group-hover/item:text-white transition-colors">{p.title}</span>
                  </li>
                ))}
                {shopifyProducts.length === 0 && (
-                 <li className="text-[10px] text-amber-500 font-bold italic tracking-tight">Checking Shopify API...</li>
+                 <li className="text-[10px] text-amber-500 font-bold italic tracking-tight">API returned 0 products...</li>
                )}
              </ul>
           </div>

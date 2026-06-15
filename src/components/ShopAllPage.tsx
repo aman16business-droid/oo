@@ -54,16 +54,28 @@ export default function ShopAllPage() {
 
       {/* Product Grid */}
       <div className="max-w-[1600px] mx-auto px-6 py-8">
-        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-4 gap-x-6 gap-y-12">
-          {displayProducts.map((product, index) => (
-            <ProductCard 
-              key={product.id + index} 
-              product={product} 
-              onAddToCart={openQuickAdd} 
-              onViewProduct={setViewedProduct} 
-            />
-          ))}
-        </div>
+        {displayProducts.length > 0 ? (
+          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-4 gap-x-6 gap-y-12">
+            {displayProducts.map((product, index) => (
+              <ProductCard 
+                key={product.id + index} 
+                product={product} 
+                onAddToCart={openQuickAdd} 
+                onViewProduct={setViewedProduct} 
+              />
+            ))}
+          </div>
+        ) : (
+          <div className="flex flex-col items-center justify-center py-20 text-gray-400">
+             <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
+                <ChevronDown size={24} className="opacity-40 animate-bounce" />
+             </div>
+            <p className="text-sm font-medium tracking-widest uppercase">CATALOG EMPTY</p>
+            <p className="text-[10px] mt-2 opacity-60 max-w-xs text-center leading-relaxed">
+              Ensure your products are set to "Active" and assigned to the Headless sales channel in Shopify Admin.
+            </p>
+          </div>
+        )}
       </div>
       
       {/* You May Also Like Section (Recommendations) */}

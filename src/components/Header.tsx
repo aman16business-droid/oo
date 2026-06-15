@@ -6,7 +6,16 @@ import { useAppContext } from '../AppContext';
 export default function Header() {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [shopName, setShopName] = useState<string>('');
   const { cart, favorites, setIsCartOpen, setIsFavOpen, setIsSearchOpen, setViewedProduct, viewedProduct, currentView, setCurrentView, connectionStatus, shopifyProducts } = useAppContext();
+
+  useEffect(() => {
+    if (connectionStatus === 'connected') {
+      import('../lib/shopify').then(m => m.getShop()).then(s => {
+        if (s) setShopName(s.name);
+      });
+    }
+  }, [connectionStatus]);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -106,7 +115,7 @@ export default function Header() {
               connectionStatus === 'loading' ? 'bg-amber-400 animate-pulse' : 'bg-red-500 shadow-red-500/50'
             }`} />
             <div className="absolute left-full ml-2 hidden group-hover/status:block whitespace-nowrap bg-black text-white text-[8px] font-black tracking-[0.2em] uppercase px-2 py-1 rounded shadow-xl border border-white/10 z-[100]">
-              Shopify: {connectionStatus === 'connected' ? `Live (${shopifyProducts.length} Prods)` : connectionStatus.toUpperCase()}
+              Shopify: {connectionStatus === 'connected' ? `${shopName || 'Live'} (${shopifyProducts.length} Prods)` : connectionStatus.toUpperCase()}
             </div>
           </div>
         </div>

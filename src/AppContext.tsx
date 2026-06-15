@@ -14,6 +14,7 @@ export interface Product {
   available: boolean;
   variants: any[];
   collections: string[];
+  createdAt: string;
 }
 
 export interface CartItem extends Product {
@@ -61,6 +62,7 @@ interface AppContextType {
   shopifyProducts: Product[];
   isLoading: boolean;
   connectionStatus: 'connected' | 'error' | 'loading';
+  refreshProducts: () => Promise<void>;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -91,65 +93,81 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const [isLoading, setIsLoading] = useState(true);
   const [connectionStatus, setConnectionStatus] = useState<'connected' | 'error' | 'loading'>('loading');
+  const [syncKey, setSyncKey] = useState(0);
+
+  const initShopify = async () => {
+    setIsLoading(true);
+    setConnectionStatus('loading');
+    try {
+      const { getAllProducts, getShop } = await import('./lib/shopify');
+      console.log('INITIATING LIVE SHOPIFY AUDIT...', new Date().toISOString());
+      
+      const shop = await getShop();
+      if (shop) {
+        console.log(`[Shopify Audit] CONNECTED TO SHOP: ${shop.name}`);
+      } else {
+        console.error('[Shopify Audit] FAILED TO FETCH SHOP INFO. Check token permissions.');
+      }
+
+      const edges = await getAllProducts();
+      
+      if (!edges || edges.length === 0) {
+        console.warn('SHOPIFY API RETURNED 0 PRODUCTS. Check product status in Shopify Admin.');
+      }
+
+      const formatted: Product[] = edges.map(({ node }: any) => {
+        const totalInventory = node.variants.edges.reduce((acc: number, edge: any) => acc + (edge.node.quantityAvailable || 0), 0);
+        const isAvailable = node.variants.edges.some((edge: any) => edge.node.availableForSale);
+        const imagesArr = node.images.edges.map((e: any) => e.node.url);
+        
+        return {
+          id: node.id,
+          title: node.title,
+          handle: node.handle,
+          description: node.description,
+          image: imagesArr[0] || '',
+          images: imagesArr,
+          originalPrice: node.compareAtPriceRange?.minVariantPrice.amount || node.priceRange.minVariantPrice.amount,
+          salePrice: node.priceRange.minVariantPrice.amount,
+          savePercentage: node.compareAtPriceRange ?
+            Math.round((1 - (parseFloat(node.priceRange.minVariantPrice.amount) / parseFloat(node.compareAtPriceRange.minVariantPrice.amount))) * 100).toString() + '%'
+            : '0%',
+          inventory: totalInventory,
+          available: isAvailable,
+          variants: node.variants.edges.map((v: any) => v.node),
+          collections: node.collections.edges.map((c: any) => c.node.handle),
+          createdAt: node.createdAt
+        };
+      });
+
+      console.log('--- SHOPIFY LIVE PRODUCT AUDIT ---');
+      console.table(formatted.map(p => ({ 
+        Title: p.title, 
+        Collections: p.collections.join(', '), 
+        Price: p.salePrice,
+        Available: p.available,
+        Created: p.createdAt
+      })));
+      console.log(`TOTAL PRODUCTS FETCHED: ${formatted.length}`);
+
+      setShopifyProducts(formatted);
+      setConnectionStatus('connected');
+      console.log(`AUDIT COMPLETE: ${formatted.length} products loaded dynamically.`);
+    } catch (error) {
+      console.error('Failed live Shopify fetch:', error);
+      setConnectionStatus('error');
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   React.useEffect(() => {
-    async function initShopify() {
-      setIsLoading(true);
-      setConnectionStatus('loading');
-      try {
-        const { getAllProducts } = await import('./lib/shopify');
-        console.log('INITIATING LIVE SHOPIFY AUDIT...', new Date().toISOString());
-        const edges = await getAllProducts();
-        
-        if (!edges || edges.length === 0) {
-          console.warn('SHOPIFY API RETURNED 0 PRODUCTS. Check product status in Shopify Admin.');
-        }
-
-        const formatted: Product[] = edges.map(({ node }: any) => {
-          const totalInventory = node.variants.edges.reduce((acc: number, edge: any) => acc + (edge.node.quantityAvailable || 0), 0);
-          const isAvailable = node.variants.edges.some((edge: any) => edge.node.availableForSale);
-          const imagesArr = node.images.edges.map((e: any) => e.node.url);
-          
-          return {
-            id: node.id,
-            title: node.title,
-            handle: node.handle,
-            description: node.description,
-            image: imagesArr[0] || '',
-            images: imagesArr,
-            originalPrice: node.compareAtPriceRange?.minVariantPrice.amount || node.priceRange.minVariantPrice.amount,
-            salePrice: node.priceRange.minVariantPrice.amount,
-            savePercentage: node.compareAtPriceRange ?
-              Math.round((1 - (parseFloat(node.priceRange.minVariantPrice.amount) / parseFloat(node.compareAtPriceRange.minVariantPrice.amount))) * 100).toString() + '%'
-              : '0%',
-            inventory: totalInventory,
-            available: isAvailable,
-            variants: node.variants.edges.map((v: any) => v.node),
-            collections: node.collections.edges.map((c: any) => c.node.handle)
-          };
-        });
-
-        console.log('--- SHOPIFY LIVE PRODUCT AUDIT ---');
-        console.table(formatted.map(p => ({ 
-          Title: p.title, 
-          Collections: p.collections.join(', '), 
-          Price: p.salePrice,
-          Available: p.available
-        })));
-        console.log(`TOTAL PRODUCTS FETCHED: ${formatted.length}`);
-
-        setShopifyProducts(formatted);
-        setConnectionStatus('connected');
-        console.log(`AUDIT COMPLETE: ${formatted.length} products loaded dynamically.`);
-      } catch (error) {
-        console.error('Failed live Shopify fetch:', error);
-        setConnectionStatus('error');
-      } finally {
-        setIsLoading(false);
-      }
-    }
     initShopify();
-  }, []);
+  }, [syncKey]);
+
+  const refreshProducts = async () => {
+    setSyncKey(prev => prev + 1);
+  };
 
   const setViewedProduct = (product: Product | null) => {
     setViewedProductState(product);
@@ -242,6 +260,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         shopifyProducts,
         isLoading,
         connectionStatus,
+        refreshProducts,
       }}
     >
       {children}
