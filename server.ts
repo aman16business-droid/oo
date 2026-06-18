@@ -151,6 +151,15 @@ async function startServer() {
     `;
 
     console.log('[Shopify Server] Fetching products for clients...');
+    
+    // In-memory cache for products
+    const CACHE_TTL = 300000; // 5 minutes
+    const staticCache = (global as any).shopifyProductCache;
+    if (staticCache && (Date.now() - staticCache.timestamp < CACHE_TTL)) {
+      console.log('[Shopify Server] Serving products from cache.');
+      return res.json(staticCache.data);
+    }
+
     const response = await shopifyFetch({ query });
     
     if (response.status !== 200) {
@@ -161,6 +170,12 @@ async function startServer() {
     if (response.body?.errors) {
       console.error('[Shopify Server] GraphQL Errors in products fetch:', JSON.stringify(response.body.errors, null, 2));
     }
+
+    // Update Cache
+    (global as any).shopifyProductCache = {
+      timestamp: Date.now(),
+      data: response.body
+    };
 
     const count = response.body?.data?.products?.edges?.length || 0;
     console.log(`[Shopify Server] Successfully fetched ${count} products.`);

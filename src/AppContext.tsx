@@ -1,4 +1,5 @@
-import React, { createContext, useContext, useState } from 'react';
+import React, { createContext, useContext, useState, useEffect } from 'react';
+import { getAsset, saveAsset } from './lib/db';
 
 export interface Product {
   id: string;
@@ -23,7 +24,13 @@ export interface CartItem extends Product {
   variantId?: string;
 }
 
-export type ViewType = 'new-arrivals' | 'old-home' | 'shop-all' | 'men-wear' | 'women-wear' | 'search-results';
+export type ViewType = 'new-arrivals' | 'old-home' | 'shop-all' | 'men-wear' | 'women-wear' | 'search-results' | 'premium' | 'best-sellers' | 'home' | 'collection';
+
+interface CollectionMeta {
+  title: string;
+  category: string;
+  gender?: 'men' | 'women';
+}
 
 interface AppContextType {
   cart: CartItem[];
@@ -32,10 +39,12 @@ interface AppContextType {
   isCartOpen: boolean;
   setIsCartOpen: (open: boolean) => void;
 
-  favorites: Product[];
-  toggleFavorite: (product: Product) => void;
-  isFavOpen: boolean;
-  setIsFavOpen: (open: boolean) => void;
+  wishlist: Product[];
+  addToWishlist: (product: Product) => void;
+  removeFromWishlist: (productId: string) => void;
+  isWishlistOpen: boolean;
+  setIsWishlistOpen: (open: boolean) => void;
+  isProductInWishlist: (productId: string) => boolean;
 
   isSearchOpen: boolean;
   setIsSearchOpen: (open: boolean) => void;
@@ -61,11 +70,45 @@ interface AppContextType {
 
   currentView: ViewType;
   setCurrentView: (view: ViewType) => void;
+  collectionMeta: CollectionMeta | null;
+  setCollectionMeta: (meta: CollectionMeta | null) => void;
   shopifyProducts: Product[];
   isLoading: boolean;
   connectionStatus: 'connected' | 'error' | 'loading';
   refreshProducts: () => Promise<void>;
+  updateProduct: (productId: string, updates: Partial<Product>) => void;
+  fileToDataUri: (file: File) => Promise<string>;
+  communityImages: string[];
+  setCommunityImages: (images: string[]) => void;
+  uploadCommunityImage: (index: number, file: File) => Promise<string>;
+  uploadProductImage: (productId: string, file: File) => Promise<string>;
+  siteSettings: {
+    heroBanner: string;
+    menBanner: string;
+    womenBanner: string;
+    ugcVideos: string[];
+  };
+  setSiteSettings: (settings: any) => void;
+  uploadSiteAsset: (key: string, file: File) => Promise<string>;
+  uploadUgcVideo: (index: number, file: File) => Promise<string>;
 }
+
+const INITIAL_UGC_VIDEOS = [
+  "https://assets.mixkit.co/videos/preview/mixkit-young-woman-modelling-a-street-wear-outfit-34533-large.mp4",
+  "https://assets.mixkit.co/videos/preview/mixkit-fashion-girl-in-a-studio-setting-34516-large.mp4",
+  "https://assets.mixkit.co/videos/preview/mixkit-girl-in-a-modern-outfit-posing-for-the-camera-34511-large.mp4",
+  "https://assets.mixkit.co/videos/preview/mixkit-woman-posing-with-a-fashionable-outfit-34547-large.mp4",
+  "https://assets.mixkit.co/videos/preview/mixkit-young-woman-with-a-fashionable-outfit-in-the-city-34505-large.mp4"
+];
+
+const INITIAL_COMMUNITY_IMAGES = [
+  "https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?q=80&w=800&auto=format&fit=crop",
+  "https://images.unsplash.com/photo-1554412930-c74f63ca9c8a?q=80&w=800&auto=format&fit=crop",
+  "https://images.unsplash.com/photo-1509631179647-0177331693ae?q=80&w=800&auto=format&fit=crop",
+  "https://images.unsplash.com/photo-152913957ed06-5906f9141f0d?q=80&w=800&auto=format&fit=crop",
+  "https://images.unsplash.com/photo-1483985988355-763728e1935b?q=80&w=800&auto=format&fit=crop",
+  "https://images.unsplash.com/photo-1496747611176-843222e1e57c?q=80&w=800&auto=format&fit=crop"
+];
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
@@ -73,8 +116,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [cart, setCart] = useState<CartItem[]>([]);
   const [isCartOpen, setIsCartOpen] = useState(false);
 
-  const [favorites, setFavorites] = useState<Product[]>([]);
-  const [isFavOpen, setIsFavOpen] = useState(false);
+  const [wishlist, setWishlist] = useState<Product[]>([]);
+  const [isWishlistOpen, setIsWishlistOpen] = useState(false);
 
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -86,13 +129,62 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const [quickAddProduct, setQuickAddProduct] = useState<Product | null>(null);
   const [isQuickAddOpen, setIsQuickAddOpen] = useState(false);
-  const [shopifyProducts, setShopifyProducts] = useState<Product[]>([]);
-  const [currentView, setCurrentView] = useState<ViewType>('new-arrivals');
+  const [siteSettings, setSiteSettings] = useState(() => {
+    const defaults = {
+      heroBanner: "/src/assets/images/new_hero_banner_1781808849648.jpg",
+      menBanner: "/src/assets/images/men_fashion_banner_final_1781774068555.jpg",
+      womenBanner: "/src/assets/images/women_fashion_banner_final_1781774082253.jpg",
+      ugcVideos: INITIAL_UGC_VIDEOS
+    };
+    const saved = localStorage.getItem('siteSettings');
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        return { ...defaults, ...parsed };
+      } catch (e) {
+        console.error('Failed to parse saved siteSettings', e);
+      }
+    }
+    return defaults;
+  });
 
-  const openQuickAdd = (product: Product) => {
-    setQuickAddProduct(product);
-    setIsQuickAddOpen(true);
+  const [communityImages, setCommunityImages] = useState<string[]>(INITIAL_COMMUNITY_IMAGES);
+
+  const [shopifyProducts, setShopifyProducts] = useState<Product[]>(() => {
+    const saved = localStorage.getItem('shopifyProducts');
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch (e) {}
+    }
+    return [];
+  });
+
+  // Helper to apply overrides from IndexedDB to products
+  const applyProductOverrides = async (products: Product[]) => {
+    return await Promise.all(products.map(async (p) => {
+      const blob = await getAsset(`productImage_${p.id}`);
+      if (blob) {
+        return { ...p, image: URL.createObjectURL(blob as Blob) };
+      }
+      return p;
+    }));
   };
+
+  // Keep shopifyProducts in sync with localStorage for basic metadata
+  useEffect(() => {
+    if (shopifyProducts.length > 0) {
+      // Filter out blob URLs if possible to avoid storing dead refs
+      const cleanProducts = shopifyProducts.map(p => {
+        if (p.image?.startsWith('blob:')) {
+          // Find original product image if possible or just remove it to force override load next time
+          return { ...p, image: '' }; 
+        }
+        return p;
+      });
+      localStorage.setItem('shopifyProducts', JSON.stringify(cleanProducts));
+    }
+  }, [shopifyProducts]);
 
   const [isLoading, setIsLoading] = useState(true);
   const [connectionStatus, setConnectionStatus] = useState<'connected' | 'error' | 'loading'>('loading');
@@ -133,9 +225,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           images: imagesArr,
           originalPrice: node.compareAtPriceRange?.minVariantPrice?.amount || node.priceRange?.minVariantPrice?.amount || '0',
           salePrice: node.priceRange?.minVariantPrice?.amount || '0',
-          savePercentage: node.compareAtPriceRange?.minVariantPrice?.amount ? 
-            Math.round((1 - (parseFloat(node.priceRange.minVariantPrice.amount) / parseFloat(node.compareAtPriceRange.minVariantPrice.amount))) * 100).toString() + '%'
-            : '0%',
+          savePercentage: (() => {
+            const sale = parseFloat(node.priceRange?.minVariantPrice?.amount || '0');
+            const original = parseFloat(node.compareAtPriceRange?.minVariantPrice?.amount || node.priceRange?.minVariantPrice?.amount || '0');
+            if (original > sale && original > 0) {
+              return Math.round((1 - (sale / original)) * 100).toString() + '%';
+            }
+            return '0%';
+          })(),
           inventory: 0,
           available: isAvailable,
           variants: node.variants?.edges?.map((v: any) => v.node) || [],
@@ -144,8 +241,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         };
       });
 
+      // Apply overrides after fetching from Shopify
+      const overridden = await applyProductOverrides(formatted);
+
       console.log('--- SHOPIFY LIVE PRODUCT AUDIT ---');
-      console.table(formatted.map(p => ({ 
+      console.table(overridden.map(p => ({ 
         Title: p.title, 
         Collections: p.collections.join(', '), 
         Price: p.salePrice,
@@ -153,7 +253,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         Date: p.createdAt
       })));
 
-      setShopifyProducts(formatted);
+      setShopifyProducts(overridden);
       setConnectionStatus('connected');
     } catch (error) {
       console.error('AppContext initShopify error:', error);
@@ -163,9 +263,159 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
-  React.useEffect(() => {
-    initShopify();
+  // Load custom assets and sync with Shopify
+  useEffect(() => {
+    const initializeStore = async () => {
+      // 1. Load Assets from IndexedDB first
+      const bannerKeys = ['heroBanner', 'menBanner', 'womenBanner'];
+      const bannerOverrides: any = {};
+      for (const key of bannerKeys) {
+        const blob = await getAsset(key);
+        if (blob) {
+          bannerOverrides[key] = URL.createObjectURL(blob as Blob);
+        }
+      }
+
+      const ugcVideos = [...INITIAL_UGC_VIDEOS];
+      for (let i = 0; i < 5; i++) {
+        const blob = await getAsset(`ugcVideo_${i}`);
+        if (blob) {
+          ugcVideos[i] = URL.createObjectURL(blob as Blob);
+        }
+      }
+
+      const commImages = [...INITIAL_COMMUNITY_IMAGES];
+      for (let i = 0; i < INITIAL_COMMUNITY_IMAGES.length; i++) {
+        const blob = await getAsset(`communityImage_${i}`);
+        if (blob) {
+          commImages[i] = URL.createObjectURL(blob as Blob);
+        }
+      }
+      setCommunityImages(commImages);
+
+      if (Object.keys(bannerOverrides).length > 0 || ugcVideos.some((v, i) => v !== INITIAL_UGC_VIDEOS[i])) {
+        setSiteSettings(prev => ({
+          ...prev,
+          ...bannerOverrides,
+          ugcVideos
+        }));
+      }
+
+      // 2. Fetch from Shopify and apply overrides
+      await initShopify();
+    };
+
+    initializeStore();
   }, [syncKey]);
+
+  useEffect(() => {
+    // Clean settings for localStorage (strip blob URLs)
+    const cleanSettings = { ...siteSettings };
+    if (cleanSettings.heroBanner?.startsWith('blob:')) delete cleanSettings.heroBanner;
+    if (cleanSettings.menBanner?.startsWith('blob:')) delete cleanSettings.menBanner;
+    if (cleanSettings.womenBanner?.startsWith('blob:')) delete cleanSettings.womenBanner;
+    if (cleanSettings.ugcVideos) {
+      cleanSettings.ugcVideos = cleanSettings.ugcVideos.map((v, i) => 
+        v.startsWith('blob:') ? INITIAL_UGC_VIDEOS[i] : v
+      );
+    }
+    localStorage.setItem('siteSettings', JSON.stringify(cleanSettings));
+  }, [siteSettings]);
+
+  const updateSiteSettings = async (updater: any) => {
+    // This is handled via setSiteSettings passed in value, 
+    // but we should provide specialized upload helpers.
+  };
+
+  const uploadSiteAsset = async (key: string, file: File) => {
+    try {
+      await saveAsset(key, file);
+      const url = URL.createObjectURL(file);
+      setSiteSettings(prev => ({
+        ...prev,
+        [key]: url
+      }));
+      return url;
+    } catch (err) {
+      console.error(`Failed to upload asset ${key}:`, err);
+      throw err;
+    }
+  };
+
+  const uploadUgcVideo = async (index: number, file: File) => {
+    try {
+      const key = `ugcVideo_${index}`;
+      await saveAsset(key, file);
+      const url = URL.createObjectURL(file);
+      setSiteSettings(prev => {
+        const nextVideos = [...prev.ugcVideos];
+        nextVideos[index] = url;
+        return { ...prev, ugcVideos: nextVideos };
+      });
+      return url;
+    } catch (err) {
+      console.error(`Failed to upload video at index ${index}:`, err);
+      throw err;
+    }
+  };
+
+  const uploadCommunityImage = async (index: number, file: File) => {
+    try {
+      const key = `communityImage_${index}`;
+      await saveAsset(key, file);
+      const url = URL.createObjectURL(file);
+      setCommunityImages(prev => {
+        const next = [...prev];
+        next[index] = url;
+        return next;
+      });
+      return url;
+    } catch (err) {
+      console.error(`Failed to upload community image at index ${index}:`, err);
+      throw err;
+    }
+  };
+
+  const uploadProductImage = async (productId: string, file: File) => {
+    try {
+      const key = `productImage_${productId}`;
+      await saveAsset(key, file);
+      const url = URL.createObjectURL(file);
+      updateProduct(productId, { image: url });
+      return url;
+    } catch (err) {
+      console.error(`Failed to upload product image for ${productId}:`, err);
+      throw err;
+    }
+  };
+
+  const [currentView, setCurrentView] = useState<ViewType>(() => {
+    return (localStorage.getItem('currentView') as ViewType) || 'home';
+  });
+  
+  useEffect(() => {
+    localStorage.setItem('currentView', currentView);
+  }, [currentView]);
+
+  const [collectionMeta, setCollectionMeta] = useState<CollectionMeta | null>(null);
+
+  const updateProduct = (productId: string, updates: Partial<Product>) => {
+    setShopifyProducts(prev => prev.map(p => p.id === productId ? { ...p, ...updates } : p));
+  };
+
+  const fileToDataUri = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+  };
+
+  const openQuickAdd = (product: Product) => {
+    setQuickAddProduct(product);
+    setIsQuickAddOpen(true);
+  };
 
   const refreshProducts = async () => {
     setSyncKey(prev => prev + 1);
@@ -201,6 +451,21 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setCart((prev) => prev.filter((_, i) => i !== index));
   };
 
+  const addToWishlist = (product: Product) => {
+    setWishlist((prev) => {
+      if (prev.find(p => p.id === product.id)) return prev;
+      return [...prev, product];
+    });
+  };
+
+  const removeFromWishlist = (productId: string) => {
+    setWishlist((prev) => prev.filter(p => p.id !== productId));
+  };
+
+  const isProductInWishlist = (productId: string) => {
+    return wishlist.some(p => p.id === productId);
+  };
+
   const updateCartItemQty = (index: number, newQty: number) => {
     setCart((prev) => {
       const next = [...prev];
@@ -220,16 +485,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     });
   };
 
-  const toggleFavorite = (product: Product) => {
-    setFavorites((prev) => {
-      if (prev.some((p) => p.id === product.id)) {
-        return prev.filter((p) => p.id !== product.id);
-      } else {
-        return [...prev, product];
-      }
-    });
-  };
-
   return (
     <AppContext.Provider
       value={{
@@ -238,10 +493,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         removeFromCart,
         isCartOpen,
         setIsCartOpen,
-        favorites,
-        toggleFavorite,
-        isFavOpen,
-        setIsFavOpen,
+        wishlist,
+        addToWishlist,
+        removeFromWishlist,
+        isWishlistOpen,
+        setIsWishlistOpen,
+        isProductInWishlist,
         isSearchOpen,
         setIsSearchOpen,
         searchQuery,
@@ -261,10 +518,22 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         openQuickAdd,
         currentView,
         setCurrentView,
+        collectionMeta,
+        setCollectionMeta,
         shopifyProducts,
         isLoading,
         connectionStatus,
         refreshProducts,
+        updateProduct,
+        fileToDataUri,
+        siteSettings,
+        setSiteSettings,
+        uploadSiteAsset,
+        uploadUgcVideo,
+        communityImages,
+        setCommunityImages,
+        uploadCommunityImage,
+        uploadProductImage,
       }}
     >
       {children}

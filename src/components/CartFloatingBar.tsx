@@ -4,8 +4,10 @@ import { ShoppingBag, X, ChevronRight } from 'lucide-react';
 import { useAppContext } from '../AppContext';
 
 export default function CartFloatingBar() {
-  const { cart, isCartBarVisible, setIsCartBarVisible, lastAddedItem, setIsCartOpen } = useAppContext();
+  const { cart, isCartBarVisible, setIsCartBarVisible, lastAddedItem, setIsCartOpen, isCartOpen, isSearchOpen, isWishlistOpen } = useAppContext();
   const [currentIndex, setCurrentIndex] = useState(0);
+
+  const isAnyDrawerOpen = isCartOpen || isSearchOpen || isWishlistOpen;
 
   useEffect(() => {
     if (cart.length <= 1) return;
@@ -37,7 +39,7 @@ export default function CartFloatingBar() {
 
   return (
     <AnimatePresence>
-      {(isCartBarVisible && cart.length > 0) && (
+      {(isCartBarVisible && cart.length > 0 && !isAnyDrawerOpen) && (
         <motion.div
           initial={{ y: 100, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}

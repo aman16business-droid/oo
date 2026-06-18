@@ -1,71 +1,96 @@
-import React, { useEffect } from 'react';
+import { useAppContext } from './AppContext';
 import Header from './components/Header';
+import Footer from './components/Footer';
+import Drawers from './components/Drawers';
+import QuickAddDrawer from './components/QuickAddDrawer';
+import ProductPage from './components/ProductPage';
 import Hero from './components/Hero';
 import CategorySplit from './components/CategorySplit';
 import EssentialsBanner from './components/EssentialsBanner';
-import ProductSections from './components/ProductSections';
 import Features from './components/Features';
-import Footer from './components/Footer';
-import { AppProvider, useAppContext } from './AppContext';
-import Drawers from './components/Drawers';
-import ProductPage from './components/ProductPage';
-import CartFloatingBar from './components/CartFloatingBar';
-import QuickAddDrawer from './components/QuickAddDrawer';
-
+import RecentlyViewed from './components/RecentlyViewed';
 import NewArrivalsPage from './components/NewArrivalsPage';
 import ShopAllPage from './components/ShopAllPage';
 import MenWearPage from './components/MenWearPage';
 import WomenWearPage from './components/WomenWearPage';
 import SearchResultsPage from './components/SearchResultsPage';
+import PremiumPage from './components/PremiumPage';
+import BestSellersPage from './components/BestSellersPage';
+import CollectionPage from './components/CollectionPage';
+import CartFloatingBar from './components/CartFloatingBar';
 
-function MainContent() {
-  const { viewedProduct, currentView, isCartBarVisible, cart } = useAppContext();
-  const showCartBar = isCartBarVisible && cart.length > 0;
+function App() {
+  const { currentView, viewedProduct } = useAppContext();
 
-  useEffect(() => {
-    window.scrollTo({ top: 0, behavior: 'instant' });
-  }, [currentView, viewedProduct]);
-
-  return (
-    <div className="min-h-screen bg-white">
-      <Header />
-      <Drawers />
-      <CartFloatingBar />
-      <QuickAddDrawer />
-      <div className={showCartBar ? "pb-20 md:pb-0" : ""}>
+  // If a product is being viewed, show the Product Detail Page regardless of currentView
+  if (viewedProduct) {
+    return (
+      <div className="min-h-screen bg-white">
+        <Header />
         <main>
-          {viewedProduct ? (
-            <ProductPage product={viewedProduct} />
-          ) : currentView === 'new-arrivals' ? (
-            <NewArrivalsPage />
-          ) : currentView === 'men-wear' ? (
-            <MenWearPage />
-          ) : currentView === 'women-wear' ? (
-            <WomenWearPage />
-          ) : currentView === 'shop-all' ? (
-            <ShopAllPage />
-          ) : currentView === 'search-results' ? (
-            <SearchResultsPage />
-          ) : (
-            <>
-              <Hero />
-              <CategorySplit />
-              <EssentialsBanner />
-              <ProductSections />
-              <Features />
-            </>
-          )}
+          <ProductPage product={viewedProduct} />
         </main>
         <Footer />
+        <Drawers />
+        <QuickAddDrawer />
+        <CartFloatingBar />
       </div>
+    );
+  }
+
+  const renderView = () => {
+    switch (currentView) {
+      case 'home':
+        return (
+          <>
+            <Hero />
+            <CategorySplit />
+            <EssentialsBanner />
+            <Features />
+            <RecentlyViewed />
+          </>
+        );
+      case 'new-arrivals':
+        return <NewArrivalsPage />;
+      case 'shop-all':
+        return <ShopAllPage />;
+      case 'men-wear':
+        return <MenWearPage />;
+      case 'women-wear':
+        return <WomenWearPage />;
+      case 'search-results':
+        return <SearchResultsPage />;
+      case 'premium':
+        return <PremiumPage />;
+      case 'best-sellers':
+        return <BestSellersPage />;
+      case 'collection':
+        return <CollectionPage />;
+      default:
+        return (
+          <>
+            <Hero />
+            <CategorySplit />
+            <EssentialsBanner />
+            <Features />
+            <RecentlyViewed />
+          </>
+        );
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-white selection:bg-black selection:text-white">
+      <Header />
+      <main>
+        {renderView()}
+      </main>
+      <Footer />
+      <Drawers />
+      <QuickAddDrawer />
+      <CartFloatingBar />
     </div>
   );
 }
 
-export default function App() {
-  return (
-    <AppProvider>
-      <MainContent />
-    </AppProvider>
-  );
-}
+export default App;

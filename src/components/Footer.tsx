@@ -2,18 +2,20 @@ import { Facebook, Twitter, Instagram, Youtube, Eclipse, ChevronRight } from 'lu
 import { useAppContext } from '../AppContext';
 
 export default function Footer() {
-  const { setViewedProduct, setCurrentView, setIsSearchOpen } = useAppContext();
+  const { setViewedProduct, setCurrentView, setIsSearchOpen, setCollectionMeta } = useAppContext();
   
   return (
-    <footer className="bg-[#111111] text-white py-20 px-8 text-sm pt-24 font-sans tracking-wide">
+    <footer className="bg-[#111111] text-white py-12 px-8 text-sm pt-12 font-sans tracking-wide">
       <div className="max-w-[1600px] mx-auto grid grid-cols-1 md:grid-cols-5 gap-12 lg:gap-8">
         
         {/* Column 1: Logo & Socials */}
         <div className="col-span-1">
-          <div className="flex items-center gap-2 mb-10 group cursor-pointer">
-            <Eclipse size={32} className="text-white group-hover:rotate-180 transition-transform duration-700" strokeWidth={2.5} />
+          <div 
+            className="flex items-center gap-2 mb-10 group cursor-pointer"
+            onClick={() => { setCurrentView('home'); window.scrollTo(0, 0); }}
+          >
             <div className="flex flex-col leading-none">
-              <span className="text-2xl font-black tracking-[-0.05em] uppercase italic">SHADOW</span>
+              <span className="text-3xl font-black tracking-[-0.05em] uppercase italic">SHADOW</span>
             </div>
           </div>
           <div className="flex gap-4">
@@ -24,25 +26,45 @@ export default function Footer() {
           </div>
         </div>
 
-        {/* Column 2: SHOP */}
+        {/* Column 2: WOMEN */}
         <div className="col-span-1">
-          <h4 className="text-white font-bold tracking-widest text-xs uppercase mb-6">SHOP</h4>
-          <ul className="space-y-4 text-gray-300">
-            <li><button onClick={() => { setViewedProduct(null); setCurrentView('shop-all'); }} className="hover:text-white transition cursor-pointer uppercase">BEST SELLERS</button></li>
-            <li><button onClick={() => { setViewedProduct(null); setCurrentView('shop-all'); }} className="hover:text-white transition cursor-pointer uppercase">Special Prices</button></li>
-            <li><button onClick={() => { setViewedProduct(null); setCurrentView('new-arrivals'); }} className="hover:text-white transition cursor-pointer uppercase">NEW ARRIVALS</button></li>
-            <li><button onClick={() => { setViewedProduct(null); setCurrentView('shop-all'); }} className="hover:text-white transition cursor-pointer uppercase">Signature</button></li>
+          <h4 className="text-white font-bold tracking-widest text-xs uppercase mb-6">WOMEN</h4>
+          <ul className="space-y-4 text-[11px] font-bold text-gray-400 uppercase tracking-widest">
+            {['OVERSIZED T-SHIRTS', 'BOTTOMS', 'JOGGERS', 'TOPS', 'HOODIES', 'SWEATSHIRTS'].map((item) => (
+              <li key={item}>
+                <button 
+                  onClick={() => {
+                    setCollectionMeta({ title: item, category: item, gender: 'women' });
+                    setCurrentView('collection');
+                    window.scrollTo(0, 0);
+                  }} 
+                  className="hover:text-white transition cursor-pointer text-left"
+                >
+                  {item}
+                </button>
+              </li>
+            ))}
           </ul>
         </div>
 
-        {/* Column 3: TRENDING */}
+        {/* Column 3: MEN */}
         <div className="col-span-1">
-          <h4 className="text-white font-bold tracking-widest text-xs uppercase mb-6">TRENDING</h4>
-          <ul className="space-y-4 text-gray-300">
-            <li><a href="#" className="hover:text-white transition">ACOSTA Collection</a></li>
-            <li><a href="#" className="hover:text-white transition">Anime Collection</a></li>
-            <li><a href="#" className="hover:text-white transition">Oversized T-shirt</a></li>
-            <li><a href="#" className="hover:text-white transition">Oversized Shirt</a></li>
+          <h4 className="text-white font-bold tracking-widest text-xs uppercase mb-6">MEN</h4>
+          <ul className="space-y-4 text-[11px] font-bold text-gray-400 uppercase tracking-widest">
+            {['OVERSIZED T-SHIRTS', 'BOTTOMS', 'TANKS', 'CARGOS', 'JOGGERS', 'GYM WEAR', 'SHORTS', 'HOODIES', 'SWEATSHIRTS', 'JACKETS'].map((item) => (
+              <li key={item}>
+                <button 
+                  onClick={() => {
+                    setCollectionMeta({ title: item, category: item, gender: 'men' });
+                    setCurrentView('collection');
+                    window.scrollTo(0, 0);
+                  }} 
+                  className="hover:text-white transition cursor-pointer text-left"
+                >
+                  {item}
+                </button>
+              </li>
+            ))}
           </ul>
         </div>
 
@@ -60,10 +82,13 @@ export default function Footer() {
         {/* Column 5: Explore & Newsletter */}
         <div className="col-span-1 flex flex-col gap-12">
           <div>
-            <h4 className="text-white font-bold tracking-widest text-xs uppercase mb-6">Explore</h4>
-            <ul className="space-y-4 text-gray-300">
-              <li><button onClick={() => setIsSearchOpen(true)} className="hover:text-white transition cursor-pointer">Search</button></li>
-              <li><a href="#" className="hover:text-white transition">About Us</a></li>
+            <h4 className="text-white font-bold tracking-widest text-xs uppercase mb-6">EXPLORE</h4>
+            <ul className="space-y-4 text-[11px] font-bold text-gray-400 uppercase tracking-widest">
+              <li><button onClick={() => { setCurrentView('new-arrivals'); window.scrollTo(0, 0); }} className="hover:text-white transition cursor-pointer">NEW ARRIVALS</button></li>
+              <li><button onClick={() => { setCurrentView('best-sellers'); window.scrollTo(0, 0); }} className="hover:text-white transition cursor-pointer">BEST SELLERS</button></li>
+              <li><button onClick={() => { setCurrentView('premium'); window.scrollTo(0, 0); }} className="hover:text-white transition cursor-pointer">PREMIUM</button></li>
+              <li><button onClick={() => { setCurrentView('shop-all'); window.scrollTo(0, 0); }} className="hover:text-white transition cursor-pointer">SHOP ALL</button></li>
+              <li><button onClick={() => { setIsSearchOpen(true); }} className="hover:text-white transition cursor-pointer">SEARCH</button></li>
             </ul>
           </div>
           <div>

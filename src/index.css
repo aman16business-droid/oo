@@ -11,6 +11,23 @@
   }
 }
 
+@layer base {
+  html {
+    scroll-behavior: smooth;
+    -webkit-tap-highlight-color: transparent;
+  }
+  
+  body {
+    @apply antialiased text-gray-900;
+    text-rendering: optimizeLegibility;
+    overscroll-behavior-y: none;
+  }
+
+  img {
+    content-visibility: auto;
+  }
+}
+
 @utility no-scrollbar {
   -ms-overflow-style: none; /* IE and Edge */
   scrollbar-width: none; /* Firefox */

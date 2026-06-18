@@ -30,7 +30,7 @@ export default function Features() {
   ];
 
   return (
-    <div className="bg-white border-t border-b border-gray-200 py-20 px-6 mt-10">
+    <div className="bg-white border-t border-b border-gray-200 py-4 px-6 mt-2">
       <div className="max-w-[1400px] mx-auto grid grid-cols-1 md:grid-cols-4 gap-12 text-center">
         {features.map((feature, idx) => (
           <div key={idx} className="flex flex-col items-center">

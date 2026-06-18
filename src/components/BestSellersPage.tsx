@@ -4,7 +4,7 @@ import { ProductCard } from './ProductSections';
 import { useAppContext, Product } from '../AppContext';
 import RecentlyViewed from './RecentlyViewed';
 
-export default function ShopAllPage() {
+export default function BestSellersPage() {
   const { setViewedProduct, openQuickAdd, setCurrentView, recentlyViewed, shopifyProducts, isLoading } = useAppContext();
 
   if (isLoading) {
@@ -16,7 +16,14 @@ export default function ShopAllPage() {
     );
   }
 
-  const displayProducts = shopifyProducts;
+  // Filter for best seller products
+  const displayProducts = shopifyProducts.filter(p => 
+    p.collections.includes('best-sellers') || 
+    p.collections.includes('best-seller') ||
+    p.title.toLowerCase().includes('best')
+  );
+
+  const fallbackProducts = shopifyProducts.slice(0, 12);
 
   return (
     <div className="w-full bg-white pb-20">
@@ -36,23 +43,23 @@ export default function ShopAllPage() {
           <span className="opacity-40">/</span> 
           <button onClick={() => setCurrentView('shop-all')} className="hover:opacity-60 transition-opacity">Shop</button> 
           <span className="opacity-40">/</span> 
-          <span className="opacity-60 cursor-default">All Products</span>
+          <span className="opacity-60 cursor-default">Best Sellers</span>
         </div>
 
         {/* Hero Content */}
         <div className="relative flex items-center justify-center w-full px-4 text-center">
           <h1 className="text-7xl md:text-[140px] font-black uppercase tracking-tighter text-white select-none leading-none opacity-95">
-            SHOP ALL
+            BEST SELLERS
           </h1>
         </div>
       </div>
 
 
       {/* Product Grid */}
-      <div className="max-w-[1600px] mx-auto px-6 py-12">
-        {displayProducts.length > 0 ? (
+      <div className="max-w-[1600px] mx-auto px-6 py-8">
+        {(displayProducts.length > 0 ? displayProducts : fallbackProducts).length > 0 ? (
           <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-4 gap-x-6 gap-y-12">
-            {displayProducts.map((product, index) => (
+            {(displayProducts.length > 0 ? displayProducts : fallbackProducts).map((product, index) => (
               <ProductCard 
                 key={product.id + index} 
                 product={product} 
@@ -70,38 +77,8 @@ export default function ShopAllPage() {
           </div>
         )}
       </div>
-      
-      {/* You May Also Like Section (Recommendations) */}
-      <div className="max-w-[1600px] mx-auto px-6 py-20 border-t border-gray-100 mt-10">
-        <div className="flex flex-col items-center mb-12">
-          <h2 className="text-11px font-black text-gray-300 uppercase tracking-[0.2em] text-center mb-4 leading-none">
-            CURATED FOR YOU
-          </h2>
-          <h3 className="text-3xl font-black text-black uppercase tracking-tight text-center leading-none">
-            YOU MAY ALSO LIKE
-          </h3>
-        </div>
-        
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-x-6 gap-y-12">
-           {shopifyProducts.slice(0, 4).map((product, index) => (
-             <ProductCard 
-               key={product.id + "-recommend-" + index} 
-               product={product} 
-               onAddToCart={openQuickAdd} 
-               onViewProduct={setViewedProduct} 
-             />
-           ))}
-        </div>
-      </div>
-      
+
       <RecentlyViewed />
-      
-      {/* Floating Action Button */}
-      <div className="fixed bottom-6 left-6 z-40">
-        <button className="w-12 h-12 bg-black text-white rounded-full flex items-center justify-center shadow-lg hover:bg-gray-800 transition">
-          <MessageSquare size={20} strokeWidth={2} />
-        </button>
-      </div>
     </div>
   );
 }
