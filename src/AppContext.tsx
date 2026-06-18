@@ -87,10 +87,12 @@ interface AppContextType {
     menBanner: string;
     womenBanner: string;
     ugcVideos: string[];
+    lockedKeys: string[];
   };
   setSiteSettings: (settings: any) => void;
   uploadSiteAsset: (key: string, file: File) => Promise<string>;
   uploadUgcVideo: (index: number, file: File) => Promise<string>;
+  isLocked: (key: string) => boolean;
 }
 
 const INITIAL_UGC_VIDEOS = [
@@ -111,6 +113,73 @@ const INITIAL_COMMUNITY_IMAGES = [
 ];
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
+
+const INITIAL_PRODUCTS: Product[] = [
+  {
+    id: '1',
+    title: 'Archive Logo Tee',
+    handle: 'archive-logo-tee',
+    description: 'A heavyweight premium cotton tee featuring our heritage logo in a faded vintage print. Boxy fit, drop shoulders.',
+    image: 'https://images.unsplash.com/photo-1521572267360-ee0c2909d518?q=80&w=800&auto=format&fit=crop',
+    images: ['https://images.unsplash.com/photo-1521572267360-ee0c2909d518?q=80&w=800&auto=format&fit=crop'],
+    originalPrice: '4500',
+    salePrice: '3200',
+    savePercentage: '29%',
+    inventory: 10,
+    available: true,
+    variants: [],
+    collections: ['new-arrivals', 'best-sellers', 'men'],
+    createdAt: new Date().toISOString()
+  },
+  {
+    id: '2',
+    title: 'Shadow Cargo Pants',
+    handle: 'shadow-cargo-pants',
+    description: 'Technical cargo pants with multi-pocket configuration and adjustable toggle hems. Water-resistant nylon blend.',
+    image: 'https://images.unsplash.com/photo-1624378439575-d8705ad7ae6c?q=80&w=800&auto=format&fit=crop',
+    images: ['https://images.unsplash.com/photo-1624378439575-d8705ad7ae6c?q=80&w=800&auto=format&fit=crop'],
+    originalPrice: '8900',
+    salePrice: '8900',
+    savePercentage: '0%',
+    inventory: 5,
+    available: true,
+    variants: [],
+    collections: ['new-arrivals', 'men'],
+    createdAt: new Date().toISOString()
+  },
+  {
+    id: '3',
+    title: 'Onyx Utility Vest',
+    handle: 'onyx-utility-vest',
+    description: 'Layering essential with breathable mesh lining and four oversized utility pockets. Matte black hardware.',
+    image: 'https://images.unsplash.com/photo-1618354691373-d851c5c3a990?q=80&w=800&auto=format&fit=crop',
+    images: ['https://images.unsplash.com/photo-1618354691373-d851c5c3a990?q=80&w=800&auto=format&fit=crop'],
+    originalPrice: '6200',
+    salePrice: '4800',
+    savePercentage: '23%',
+    inventory: 8,
+    available: true,
+    variants: [],
+    collections: ['best-sellers', 'women'],
+    createdAt: new Date().toISOString()
+  },
+  {
+    id: '4',
+    title: 'Distortion Graphic Hoodie',
+    handle: 'distortion-graphic-hoodie',
+    description: 'Heavyweight fleece hoodie with screen-printed distortion graphic on back. Relaxed silhouette.',
+    image: 'https://images.unsplash.com/photo-1556821840-3a63f95609a7?q=80&w=800&auto=format&fit=crop',
+    images: ['https://images.unsplash.com/photo-1556821840-3a63f95609a7?q=80&w=800&auto=format&fit=crop'],
+    originalPrice: '7500',
+    salePrice: '7500',
+    savePercentage: '0%',
+    inventory: 12,
+    available: true,
+    variants: [],
+    collections: ['new-arrivals', 'women'],
+    createdAt: new Date().toISOString()
+  }
+];
 
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [cart, setCart] = useState<CartItem[]>([]);
@@ -134,7 +203,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       heroBanner: "/src/assets/images/new_hero_banner_1781808849648.jpg",
       menBanner: "/src/assets/images/men_fashion_banner_final_1781774068555.jpg",
       womenBanner: "/src/assets/images/women_fashion_banner_final_1781774082253.jpg",
-      ugcVideos: INITIAL_UGC_VIDEOS
+      ugcVideos: INITIAL_UGC_VIDEOS,
+      lockedKeys: []
     };
     const saved = localStorage.getItem('siteSettings');
     if (saved) {
@@ -303,13 +373,21 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
       // 2. Fetch from Shopify and apply overrides
       await initShopify();
+      
+      setShopifyProducts(prev => {
+        if (prev.length === 0) {
+          console.log('[Shopify Fallback] No products found, using initial catalog.');
+          return INITIAL_PRODUCTS;
+        }
+        return prev;
+      });
     };
 
     initializeStore();
   }, [syncKey]);
 
   useEffect(() => {
-    // Clean settings for localStorage (strip blob URLs)
+    // Save settings to localStorage, filtering out blob URLs but keeping lockedKeys
     const cleanSettings = { ...siteSettings };
     if (cleanSettings.heroBanner?.startsWith('blob:')) delete cleanSettings.heroBanner;
     if (cleanSettings.menBanner?.startsWith('blob:')) delete cleanSettings.menBanner;
@@ -322,18 +400,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     localStorage.setItem('siteSettings', JSON.stringify(cleanSettings));
   }, [siteSettings]);
 
-  const updateSiteSettings = async (updater: any) => {
-    // This is handled via setSiteSettings passed in value, 
-    // but we should provide specialized upload helpers.
-  };
+  const isLocked = (key: string) => siteSettings.lockedKeys?.includes(key);
 
   const uploadSiteAsset = async (key: string, file: File) => {
     try {
+      console.log(`[Asset] Uploading ${key}...`);
       await saveAsset(key, file);
       const url = URL.createObjectURL(file);
       setSiteSettings(prev => ({
         ...prev,
-        [key]: url
+        [key]: url,
+        lockedKeys: [...new Set([...(prev.lockedKeys || []), key])]
       }));
       return url;
     } catch (err) {
@@ -350,7 +427,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       setSiteSettings(prev => {
         const nextVideos = [...prev.ugcVideos];
         nextVideos[index] = url;
-        return { ...prev, ugcVideos: nextVideos };
+        return { 
+          ...prev, 
+          ugcVideos: nextVideos,
+          lockedKeys: [...new Set([...(prev.lockedKeys || []), key])]
+        };
       });
       return url;
     } catch (err) {
@@ -369,6 +450,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         next[index] = url;
         return next;
       });
+      // Community images don't use siteSettings.lockedKeys, 
+      // but let's add them to siteSettings anyway to track globally
+      setSiteSettings(prev => ({
+        ...prev,
+        lockedKeys: [...new Set([...(prev.lockedKeys || []), key])]
+      }));
       return url;
     } catch (err) {
       console.error(`Failed to upload community image at index ${index}:`, err);
@@ -382,6 +469,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       await saveAsset(key, file);
       const url = URL.createObjectURL(file);
       updateProduct(productId, { image: url });
+      setSiteSettings(prev => ({
+        ...prev,
+        lockedKeys: [...new Set([...(prev.lockedKeys || []), key])]
+      }));
       return url;
     } catch (err) {
       console.error(`Failed to upload product image for ${productId}:`, err);
@@ -534,6 +625,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         setCommunityImages,
         uploadCommunityImage,
         uploadProductImage,
+        isLocked,
       }}
     >
       {children}

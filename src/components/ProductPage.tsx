@@ -12,7 +12,7 @@ export default function ProductPage({ product: initialProduct }: { product: Prod
     openQuickAdd, setIsCartOpen, shopifyProducts, isLoading,
     addToWishlist, removeFromWishlist, isProductInWishlist, 
     isCartOpen, isSearchOpen, isWishlistOpen, communityImages,
-    uploadCommunityImage, uploadProductImage
+    uploadCommunityImage, uploadProductImage, isLocked
   } = useAppContext();
   
   const [product, setProduct] = useState(initialProduct);
@@ -237,7 +237,7 @@ export default function ProductPage({ product: initialProduct }: { product: Prod
                    <div className="absolute inset-0 bg-gradient-to-b from-black/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
                    
                    {/* Upload Button Overlay */}
-                   {!product.image?.startsWith('blob:') && (
+                   {!isLocked(`productImage_${product.id}`) && (
                      <div className="absolute top-10 left-10 z-50 transition-all">
                        <button 
                          onClick={(e) => {
@@ -513,8 +513,7 @@ export default function ProductPage({ product: initialProduct }: { product: Prod
                     />
                     
                      {/* Upload Button Overlay */}
-                     {!communityImages[i]?.startsWith('blob:') && (
-                       <div className="absolute top-2 left-2 z-50 transition-all">
+                     <div className="absolute top-2 left-2 z-50 transition-all">
                          <button 
                            onClick={(e) => {
                              e.stopPropagation();
@@ -532,7 +531,7 @@ export default function ProductPage({ product: initialProduct }: { product: Prod
                            accept="image/*"
                          />
                        </div>
-                     )}
+                     
 
                     <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
                       <Instagram className="text-white" size={20} />

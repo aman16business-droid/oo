@@ -6,6 +6,7 @@ import QuickAddDrawer from './components/QuickAddDrawer';
 import ProductPage from './components/ProductPage';
 import Hero from './components/Hero';
 import CategorySplit from './components/CategorySplit';
+import ProductSections from './components/ProductSections';
 import EssentialsBanner from './components/EssentialsBanner';
 import Features from './components/Features';
 import RecentlyViewed from './components/RecentlyViewed';
@@ -45,6 +46,7 @@ function App() {
           <>
             <Hero />
             <CategorySplit />
+            <ProductSections />
             <EssentialsBanner />
             <Features />
             <RecentlyViewed />

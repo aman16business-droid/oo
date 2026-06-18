@@ -47,7 +47,7 @@ const INITIAL_UGC_DATA = [
 ];
 
 export default function EssentialsBanner() {
-  const { setViewedProduct, shopifyProducts, siteSettings, uploadUgcVideo } = useAppContext();
+  const { setViewedProduct, shopifyProducts, siteSettings, uploadUgcVideo, isLocked } = useAppContext();
   const [currentIndex, setCurrentIndex] = useState(0);
   const fileInputRefs = useRef<{ [key: number]: HTMLInputElement | null }>({});
   
@@ -123,27 +123,25 @@ export default function EssentialsBanner() {
                       <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />
                       
                       {/* Upload Button */}
-                      {!item.videoUrl.startsWith('blob:') && (
-                        <div className="absolute top-3 left-3 z-50">
-                           <button 
-                             onClick={(e) => {
-                               e.stopPropagation();
-                               fileInputRefs.current[item.id]?.click();
-                             }}
-                             className="w-10 h-10 bg-black text-white rounded-full flex items-center justify-center shadow-2xl border border-white/20"
-                           >
-                              <Upload size={14} />
-                           </button>
-                           <input 
-                             type="file" 
-                             ref={el => fileInputRefs.current[item.id] = el}
-                             onChange={(e) => handleUpload(e, item.id)}
-                             onClick={(e) => e.stopPropagation()}
-                             className="hidden"
-                             accept="video/*"
-                           />
-                        </div>
-                      )}
+                      <div className="absolute top-3 left-3 z-50">
+                         <button 
+                           onClick={(e) => {
+                             e.stopPropagation();
+                             fileInputRefs.current[item.id]?.click();
+                           }}
+                           className="w-10 h-10 bg-black text-white rounded-full flex items-center justify-center shadow-2xl border border-white/20"
+                         >
+                            <Upload size={14} />
+                         </button>
+                         <input 
+                           type="file" 
+                           ref={el => fileInputRefs.current[item.id] = el}
+                           onChange={(e) => handleUpload(e, item.id)}
+                           onClick={(e) => e.stopPropagation()}
+                           className="hidden"
+                           accept="video/*"
+                         />
+                      </div>
 
                       <div className="absolute inset-x-0 bottom-0 p-3">
                          <div className="bg-white/95 backdrop-blur-md p-2 rounded-[18px] flex items-center justify-between shadow-2xl">
@@ -189,8 +187,7 @@ export default function EssentialsBanner() {
                 <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />
                 
                 {/* Upload Button */}
-                {!item.videoUrl.startsWith('blob:') && (
-                  <div className="absolute top-4 left-4 z-50 transition-all">
+                <div className="absolute top-4 left-4 z-50 transition-all">
                      <button 
                         onClick={(e) => {
                           e.stopPropagation();
@@ -210,7 +207,6 @@ export default function EssentialsBanner() {
                         accept="video/*"
                      />
                   </div>
-                )}
 
                 <div className="absolute inset-x-0 bottom-0 p-4">
                    <div className="bg-white/95 backdrop-blur-md p-2 rounded-[18px] flex items-center justify-between shadow-2xl transition-all duration-500">
