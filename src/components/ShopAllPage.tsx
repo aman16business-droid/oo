@@ -21,7 +21,7 @@ export default function ShopAllPage() {
   return (
     <div className="w-full bg-white pb-20">
       {/* Hero Banner */}
-      <div className="relative w-full h-[40vh] min-h-[350px] flex items-center justify-center bg-[#bdbdbd] mt-[72px] overflow-hidden">
+      <div className="relative w-full h-[40vh] min-h-[350px] flex items-center justify-center bg-[#bdbdbd] overflow-hidden">
         {/* Breadcrumbs */}
         <div className="absolute top-10 left-10 text-[11px] text-white font-bold z-20 flex gap-2 tracking-[0.2em] uppercase">
           <button 

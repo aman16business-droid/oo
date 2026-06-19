@@ -41,9 +41,18 @@ export async function createCheckout(items: { variantId: string; quantity: numbe
       body: JSON.stringify({ items })
     });
     const data = await response.json();
-    return data?.data?.checkoutCreate?.checkout?.webUrl || null;
+    
+    // Check for userErrors
+    if (data?.data?.cartCreate?.userErrors?.length > 0) {
+      console.error('Cart Create Errors:', data.data.cartCreate.userErrors);
+      // Return the first error message to display
+      return { error: data.data.cartCreate.userErrors[0].message };
+    }
+
+    const url = data?.data?.cartCreate?.cart?.checkoutUrl || data?.data?.checkoutCreate?.checkout?.webUrl || null;
+    return url ? { url } : { error: 'Failed to generate checkout URL' };
   } catch (error) {
     console.error('Checkout error:', error);
-    return null;
+    return { error: 'Network error generating checkout' };
   }
 }

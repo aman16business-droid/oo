@@ -32,27 +32,29 @@ export default function CategorySplit() {
         />
         
         {/* Upload Button Overlay */}
-        <div className="absolute bottom-40 left-10 z-50 transition-all">
-          <button 
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              menInputRef.current?.click();
-            }}
-            className="bg-black text-white p-3 rounded-full shadow-2xl hover:scale-110 active:scale-95 transition-all flex items-center gap-2 text-[9px] font-black tracking-widest uppercase border border-white/20"
-          >
-            <Upload size={14} />
-            <span>Upload Men Banner</span>
-          </button>
-          <input 
-            type="file" 
-            ref={menInputRef} 
-            onChange={(e) => handleUpload(e, 'menBanner')} 
-            onClick={(e) => e.stopPropagation()}
-            className="hidden" 
-            accept="image/*"
-          />
-        </div>
+        {!isLocked('menBanner') && (
+          <div className="absolute bottom-40 left-10 z-50 transition-all">
+            <button 
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                menInputRef.current?.click();
+              }}
+              className="bg-black text-white p-3 rounded-full shadow-2xl hover:scale-110 active:scale-95 transition-all flex items-center gap-2 text-[9px] font-black tracking-widest uppercase border border-white/20"
+            >
+              <Upload size={14} />
+              <span>Upload Men Banner</span>
+            </button>
+            <input 
+              type="file" 
+              ref={menInputRef} 
+              onChange={(e) => handleUpload(e, 'menBanner')} 
+              onClick={(e) => e.stopPropagation()}
+              className="hidden" 
+              accept="image/*"
+            />
+          </div>
+        )}
 
         <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent flex flex-col justify-end p-8 md:p-12 pb-16">
           <h2 className="text-white text-xl md:text-2xl font-bold mb-5 tracking-widest leading-none drop-shadow-sm">SHOP MENS</h2>
@@ -79,27 +81,29 @@ export default function CategorySplit() {
         />
 
         {/* Upload Button Overlay */}
-        <div className="absolute bottom-40 right-10 z-50 transition-all text-right">
-          <button 
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              womenInputRef.current?.click();
-            }}
-            className="bg-black text-white p-3 rounded-full shadow-2xl hover:scale-110 active:scale-95 transition-all flex items-center gap-2 text-[9px] font-black tracking-widest uppercase ml-auto border border-white/20"
-          >
-            <Upload size={14} />
-            <span>Upload Women Banner</span>
-          </button>
-          <input 
-            type="file" 
-            ref={womenInputRef} 
-            onChange={(e) => handleUpload(e, 'womenBanner')} 
-            onClick={(e) => e.stopPropagation()}
-            className="hidden" 
-            accept="image/*"
-          />
-        </div>
+        {!isLocked('womenBanner') && (
+          <div className="absolute bottom-40 right-10 z-50 transition-all text-right">
+            <button 
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                womenInputRef.current?.click();
+              }}
+              className="bg-black text-white p-3 rounded-full shadow-2xl hover:scale-110 active:scale-95 transition-all flex items-center gap-2 text-[9px] font-black tracking-widest uppercase ml-auto border border-white/20"
+            >
+              <Upload size={14} />
+              <span>Upload Women Banner</span>
+            </button>
+            <input 
+              type="file" 
+              ref={womenInputRef} 
+              onChange={(e) => handleUpload(e, 'womenBanner')} 
+              onClick={(e) => e.stopPropagation()}
+              className="hidden" 
+              accept="image/*"
+            />
+          </div>
+        )}
 
         <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent flex flex-col justify-end p-8 md:p-12 pb-16">
           <h2 className="text-white text-xl md:text-2xl font-bold mb-5 tracking-widest leading-none drop-shadow-sm text-right">SHOP WOMENS</h2>

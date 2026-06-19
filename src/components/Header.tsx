@@ -29,17 +29,17 @@ export default function Header() {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  const isHomePage = currentView === 'home' && viewedProduct === null;
-  const headerBgClass = isHomePage 
-    ? (isScrolled ? 'bg-black/5 text-white' : 'bg-transparent text-white border-b border-white/5')
+  const isTransparentView = (currentView === 'home' || currentView === 'men-wear' || currentView === 'women-wear' || currentView === 'new-arrivals' || currentView === 'premium' || currentView === 'best-sellers' || currentView === 'shop-all' || currentView === 'collection') && viewedProduct === null;
+  const headerBgClass = isTransparentView 
+    ? `bg-transparent text-black ${isScrolled ? 'border-b border-black/5' : ''}`
     : 'bg-white text-black border-b border-gray-100 shadow-sm';
 
   return (
-    <header className={`fixed top-0 left-0 w-full z-50 font-sans transition-all duration-500 ${headerBgClass}`}>
+    <header className={`fixed top-0 left-0 w-full z-[100] font-sans transition-all duration-300 ${headerBgClass}`}>
       {/* Announcement Bar */}
       <div className={`transition-all duration-300 overflow-hidden ${isScrolled ? 'h-0 opacity-0' : 'h-auto opacity-100'}`}>
-        <div className="bg-black text-[9px] sm:text-[10px] py-1.5 flex leading-tight relative overflow-hidden">
-          <div className="flex whitespace-nowrap uppercase tracking-[0.25em] font-medium animate-marquee w-max text-white">
+        <div className={`${isTransparentView ? 'bg-transparent' : 'bg-black'} text-[9px] sm:text-[10px] py-1.5 flex leading-tight relative overflow-hidden`}>
+          <div className={`flex whitespace-nowrap uppercase tracking-[0.25em] font-medium animate-marquee w-max ${isTransparentView ? 'text-black' : 'text-white'}`}>
             <div className="flex gap-16 items-center px-10">
               <span>EXPLORE THE LATEST COLLECTIONS</span>
               <span>FREE SHIPPING ON ORDERS OVER 5000</span>
@@ -124,14 +124,14 @@ export default function Header() {
           >
             <Heart size={22} strokeWidth={1.5} />
             {wishlist.length > 0 && (
-              <span className={`absolute top-1 right-1 text-[8px] w-4 h-4 rounded-full flex items-center justify-center font-black ${!isHomePage ? 'bg-[#df3333] text-white' : 'bg-[#df3333] text-white'} shadow-sm`}>
+              <span className={`absolute top-1 right-1 text-[8px] w-4 h-4 rounded-full flex items-center justify-center font-black ${!isTransparentView ? 'bg-[#df3333] text-white' : 'bg-[#df3333] text-white'} shadow-sm`}>
                 {wishlist.length}
               </span>
             )}
           </button>
           <div className="relative p-2.5 cursor-pointer hover:opacity-60 transition" onClick={() => setIsCartOpen(true)}>
             <ShoppingBag size={22} strokeWidth={1.5} />
-            <span className={`absolute top-1 right-1 text-[8px] w-4 h-4 rounded-full flex items-center justify-center font-black ${!isHomePage ? 'bg-black text-white' : 'bg-white text-black'} shadow-sm`}>
+            <span className={`absolute top-1 right-1 text-[8px] w-4 h-4 rounded-full flex items-center justify-center font-black ${(isTransparentView) ? 'bg-black text-white' : 'bg-black text-white'} shadow-sm`}>
               {cart.reduce((total, item) => total + item.quantity, 0)}
             </span>
           </div>

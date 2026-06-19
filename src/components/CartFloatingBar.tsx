@@ -4,10 +4,13 @@ import { ShoppingBag, X, ChevronRight } from 'lucide-react';
 import { useAppContext } from '../AppContext';
 
 export default function CartFloatingBar() {
-  const { cart, isCartBarVisible, setIsCartBarVisible, lastAddedItem, setIsCartOpen, isCartOpen, isSearchOpen, isWishlistOpen } = useAppContext();
+  const { cart, isCartBarVisible, setIsCartBarVisible, lastAddedItem, setIsCartOpen, isCartOpen, isSearchOpen, isWishlistOpen, viewedProduct } = useAppContext();
   const [currentIndex, setCurrentIndex] = useState(0);
 
   const isAnyDrawerOpen = isCartOpen || isSearchOpen || isWishlistOpen;
+  
+  // Do not show the cart floating bar on the product page on mobile, as it conflicts with the mobile floating add to cart bar
+  const shouldHideOnMobile = viewedProduct !== null;
 
   useEffect(() => {
     if (cart.length <= 1) return;
@@ -45,7 +48,7 @@ export default function CartFloatingBar() {
           animate={{ y: 0, opacity: 1 }}
           exit={{ y: 100, opacity: 0 }}
           transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-          className="fixed bottom-0 md:bottom-6 left-0 md:left-1/2 md:-translate-x-1/2 z-[100] w-full md:w-[calc(100%-32px)] md:max-w-[1000px]"
+          className={`fixed bottom-0 md:bottom-6 left-0 md:left-1/2 md:-translate-x-1/2 z-[100] w-full md:w-[calc(100%-32px)] md:max-w-[1000px] ${shouldHideOnMobile ? 'hidden md:block' : ''}`}
         >
           <div className="bg-white md:rounded-xl shadow-[0_-8px_25px_rgba(0,0,0,0.1)] md:shadow-[0_15px_40px_rgba(0,0,0,0.12)] border-t md:border border-gray-100 overflow-hidden flex items-center py-1.5 md:py-2 px-4 md:px-6 gap-3 md:gap-6 backdrop-blur-2xl bg-white">
             {/* Product Info */}

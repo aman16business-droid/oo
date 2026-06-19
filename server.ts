@@ -209,15 +209,21 @@ async function startServer() {
   // API Route for checkout
   app.post("/api/shopify/checkout", async (req, res) => {
     const { items } = req.body;
+    
+    // Check if variantIds are present 
+    if (!items || !items.length || !items[0].variantId) {
+      console.error("[Shopify Server] Invalid checkout items received:", items);
+      return res.status(400).json({ error: "Invalid items, missing variantId" });
+    }
+
     const query = `
-      mutation checkoutCreate($input: CheckoutCreateInput!) {
-        checkoutCreate(input: $input) {
-          checkout {
+      mutation cartCreate($input: CartInput!) {
+        cartCreate(input: $input) {
+          cart {
             id
-            webUrl
+            checkoutUrl
           }
-          checkoutUserErrors {
-            code
+          userErrors {
             field
             message
           }
@@ -227,14 +233,17 @@ async function startServer() {
 
     const variables = {
       input: {
-        lineItems: items.map((item: any) => ({
-          variantId: item.variantId,
+        lines: items.map((item: any) => ({
+          merchandiseId: item.variantId,
           quantity: item.quantity
         }))
       }
     };
 
     const response = await shopifyFetch({ query, variables });
+    
+    console.log('[Shopify Server] Checkout/Cart Response:', JSON.stringify(response.body, null, 2));
+
     if (response.status !== 200) {
       return res.status(response.status).json(response);
     }

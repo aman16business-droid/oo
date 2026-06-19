@@ -31,22 +31,30 @@ export default function Drawers() {
     if (cart.length === 0) return;
     setIsCheckingOut(true);
     
+    // Attempt to map out variant IDs to submit to Shopify
     const items = cart.map(item => ({
       variantId: item.variantId || item.variants?.[0]?.id,
       quantity: item.quantity
     })).filter(i => i.variantId);
 
     if (items.length === 0) {
-      alert("Something went wrong. Please try adding items again.");
+      alert("Failed to find valid product variants. This typically happens when using the base mock products without a real Shopify integration. Please connect your store.");
       setIsCheckingOut(false);
       return;
     }
 
-    const url = await createCheckout(items);
-    if (url) {
-      window.location.href = url;
+    const result = await createCheckout(items);
+    if (result?.url) {
+      if (window.top !== window.self) {
+        // App is running inside the AI Studio preview iframe
+        alert("Shopify strictly blocks checkout pages from loading inside an iframe for security reasons. \n\nBecause you are viewing this app inside the AI Studio preview, we must open the checkout in a new window. \n\nTo view this app normally (where checkout happens in the same tab), please click the 'Open in New Window' icon in the top right corner of the AI Studio preview header.");
+        window.open(result.url, '_blank');
+      } else {
+        // App is opened in its own separate tab
+        window.location.href = result.url;
+      }
     } else {
-      alert("Failed to create checkout. Please try again.");
+      alert(result?.error || "Failed to create checkout. Please check your Shopify credentials.");
       setIsCheckingOut(false);
     }
   };

@@ -112,15 +112,60 @@ export default function ProductPage({ product: initialProduct }: { product: Prod
     setIsCartOpen(true);
   };
 
-  const handleBuyNow = () => {
+  const handleBuyNow = async () => {
     if (!selectedSize) {
       setSizeError(true);
       setPendingAction('buy');
       sizeAnchorRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
       return;
     }
-    // Implement checkout logic here or just open cart for now
-    handleAddToCart();
+    
+    // Quick checkout for single item
+    const variantId = product.variants?.find((v: any) => 
+      v.selectedOptions?.some((o: any) => o.value === selectedSize)
+    )?.id || product.variants?.[0]?.id;
+
+    if (!variantId) {
+      alert("This product cannot be checked out directly. It might be a preview item.");
+      return;
+    }
+
+    // Use dynamic import or existing function from shopify lib
+    setIsCartOpen(false); // Make sure cart drawer is closed
+    
+    try {
+      // Create a temporary checkout directly
+      const response = await fetch('/api/shopify/checkout', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ 
+          items: [{ variantId, quantity }] 
+        })
+      });
+      const data = await response.json();
+      
+      if (data?.data?.cartCreate?.userErrors?.length > 0) {
+        alert(data.data.cartCreate.userErrors[0].message);
+        return;
+      }
+
+      const url = data?.data?.cartCreate?.cart?.checkoutUrl || data?.data?.checkoutCreate?.checkout?.webUrl;
+      if (url) {
+        if (window.top !== window.self) {
+          alert("Shopify strictly blocks checkout pages from loading inside an iframe for security reasons. \n\nBecause you are viewing this app inside the AI Studio preview, we must open the checkout in a new window. \n\nTo view this app normally (where checkout happens in the same tab), please click the 'Open in New Window' icon in the top right corner of the AI Studio preview header.");
+          window.open(url, '_blank');
+        } else {
+          window.location.href = url;
+        }
+      } else {
+        alert("Failed to initiate direct checkout. Please check Shopify connection.");
+      }
+    } catch (e) {
+      console.error(e);
+      alert("Checkout request failed.");
+    }
   };
 
   useEffect(() => {
@@ -574,7 +619,7 @@ export default function ProductPage({ product: initialProduct }: { product: Prod
             animate={{ y: 0, opacity: 1, scale: 1 }}
             exit={{ y: 120, opacity: 0, scale: 0.95 }}
             transition={{ type: "spring", damping: 25, stiffness: 200, delay: 0.4 }}
-            className="lg:hidden fixed bottom-6 left-2 right-2 z-[200] h-[68px] bg-white shadow-[0_20px_40px_-10px_rgba(0,0,0,0.3)] border border-gray-100 flex items-center px-2 gap-1.5 rounded-[18px] overflow-hidden will-change-transform"
+            className="md:hidden fixed bottom-6 left-2 right-2 z-[200] h-[68px] bg-white shadow-[0_20px_40px_-10px_rgba(0,0,0,0.3)] border border-gray-100 flex items-center px-2 gap-1.5 rounded-[18px] overflow-hidden will-change-transform"
           >
             <div className="relative w-10 h-10 bg-gray-50 flex-shrink-0 overflow-hidden rounded-lg border border-gray-100">
               <img src={product.image} alt={product.title} className="w-full h-full object-cover" />

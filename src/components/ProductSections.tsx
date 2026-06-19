@@ -93,7 +93,7 @@ export const ProductCard = React.memo(({ product, onAddToCart, onViewProduct }: 
 export default function ProductSections() {
   const { setViewedProduct, openQuickAdd, shopifyProducts, isLoading, setCurrentView } = useAppContext();
 
-  if (isLoading) {
+  if (isLoading && shopifyProducts.length === 0) {
     return (
       <div className="py-40 flex flex-col items-center justify-center gap-6">
         <Loader2 className="w-12 h-12 animate-spin text-black/10" strokeWidth={1} />
