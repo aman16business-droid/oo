@@ -1,5 +1,12 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { getAsset, saveAsset } from './lib/db';
+import { getAsset, saveAsset, removeAsset } from './lib/db';
+import { db, auth, storage } from './lib/firebase';
+import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { ref as storageRef, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { signInAnonymously } from 'firebase/auth';
+import defaultHeroBanner from './assets/images/new_hero_banner_1781808849648.jpg';
+import defaultMenBanner from './assets/images/men_fashion_banner_final_1781774068555.jpg';
+import defaultWomenBanner from './assets/images/women_fashion_banner_final_1781774082253.jpg';
 
 export interface Product {
   id: string;
@@ -24,7 +31,7 @@ export interface CartItem extends Product {
   variantId?: string;
 }
 
-export type ViewType = 'new-arrivals' | 'old-home' | 'shop-all' | 'men-wear' | 'women-wear' | 'search-results' | 'premium' | 'best-sellers' | 'home' | 'collection';
+export type ViewType = 'new-arrivals' | 'old-home' | 'shop-all' | 'men-wear' | 'women-wear' | 'search-results' | 'premium' | 'best-sellers' | 'home' | 'collection' | 'terms' | 'faqs' | 'privacy' | 'shipping-policy' | 'return-policy' | 'exchange-policy' | 'payment-policy';
 
 interface CollectionMeta {
   title: string;
@@ -91,8 +98,17 @@ interface AppContextType {
   };
   setSiteSettings: (settings: any) => void;
   uploadSiteAsset: (key: string, file: File) => Promise<string>;
+  updateSiteAssetUrl: (key: string, url: string) => Promise<void>;
+  resetSiteAsset: (key: string) => Promise<void>;
   uploadUgcVideo: (index: number, file: File) => Promise<string>;
   isLocked: (key: string) => boolean;
+  isUploading: boolean;
+  isAuthModalOpen: boolean;
+  setIsAuthModalOpen: (open: boolean) => void;
+  user: any | null;
+  setUser: (user: any | null) => void;
+  deliveryPincode: string;
+  setDeliveryPincode: (pin: string) => void;
 }
 
 const INITIAL_UGC_VIDEOS = [
@@ -181,11 +197,74 @@ const INITIAL_PRODUCTS: Product[] = [
   }
 ];
 
+enum OperationType {
+  CREATE = 'create',
+  UPDATE = 'update',
+  DELETE = 'delete',
+  LIST = 'list',
+  GET = 'get',
+  WRITE = 'write',
+}
+
+interface FirestoreErrorInfo {
+  error: string;
+  operationType: OperationType;
+  path: string | null;
+  authInfo: {
+    userId?: string | null;
+    email?: string | null;
+    emailVerified?: boolean | null;
+    isAnonymous?: boolean | null;
+    tenantId?: string | null;
+    providerInfo?: {
+      providerId?: string | null;
+      email?: string | null;
+    }[];
+  }
+}
+
+function handleFirestoreError(error: unknown, operationType: OperationType, path: string | null) {
+  const errInfo: FirestoreErrorInfo = {
+    error: error instanceof Error ? error.message : String(error),
+    authInfo: {
+      userId: auth.currentUser?.uid,
+      email: auth.currentUser?.email,
+      emailVerified: auth.currentUser?.emailVerified,
+      isAnonymous: auth.currentUser?.isAnonymous,
+      tenantId: auth.currentUser?.tenantId,
+      providerInfo: auth.currentUser?.providerData?.map(provider => ({
+        providerId: provider.providerId,
+        email: provider.email,
+      })) || []
+    },
+    operationType,
+    path
+  }
+  console.error('Firestore Error: ', JSON.stringify(errInfo));
+  // Don't throw here, just log it. Let the caller decide if it should throw.
+  return errInfo;
+}
+
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [cart, setCart] = useState<CartItem[]>([]);
   const [isCartOpen, setIsCartOpen] = useState(false);
 
-  const [wishlist, setWishlist] = useState<Product[]>([]);
+  const [wishlist, setWishlist] = useState<Product[]>(() => {
+    const saved = localStorage.getItem('wishlist');
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch (e) {
+        console.error('Failed to parse saved wishlist', e);
+      }
+    }
+    return [];
+  });
+  
+  useEffect(() => {
+    localStorage.setItem('wishlist', JSON.stringify(wishlist));
+  }, [wishlist]);
+
   const [isWishlistOpen, setIsWishlistOpen] = useState(false);
 
   const [isSearchOpen, setIsSearchOpen] = useState(false);
@@ -198,11 +277,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const [quickAddProduct, setQuickAddProduct] = useState<Product | null>(null);
   const [isQuickAddOpen, setIsQuickAddOpen] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
   const [siteSettings, setSiteSettings] = useState(() => {
     const defaults = {
-      heroBanner: "/src/assets/images/new_hero_banner_1781808849648.jpg",
-      menBanner: "/src/assets/images/men_fashion_banner_final_1781774068555.jpg",
-      womenBanner: "/src/assets/images/women_fashion_banner_final_1781774082253.jpg",
+      heroBanner: defaultHeroBanner,
+      menBanner: defaultMenBanner,
+      womenBanner: defaultWomenBanner,
       ugcVideos: INITIAL_UGC_VIDEOS,
       lockedKeys: []
     };
@@ -210,6 +290,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
+        // Replace old raw /src/assets paths with the correct Vite imports
+        if (parsed.heroBanner?.startsWith('/src/assets/')) parsed.heroBanner = defaultHeroBanner;
+        if (parsed.menBanner?.startsWith('/src/assets/')) parsed.menBanner = defaultMenBanner;
+        if (parsed.womenBanner?.startsWith('/src/assets/')) parsed.womenBanner = defaultWomenBanner;
+        
         return { ...defaults, ...parsed };
       } catch (e) {
         console.error('Failed to parse saved siteSettings', e);
@@ -224,10 +309,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const saved = localStorage.getItem('shopifyProducts');
     if (saved) {
       try {
-        return JSON.parse(saved);
+        const parsed = JSON.parse(saved);
+        if (parsed.length > 0) return parsed;
       } catch (e) {}
     }
-    return [];
+    return INITIAL_PRODUCTS;
   });
 
   // Helper to apply overrides from IndexedDB to products
@@ -259,6 +345,23 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [isLoading, setIsLoading] = useState(true);
   const [connectionStatus, setConnectionStatus] = useState<'connected' | 'error' | 'loading'>('loading');
   const [syncKey, setSyncKey] = useState(0);
+
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+  const [user, setUserState] = useState<any | null>(() => {
+    const savedUser = localStorage.getItem('shadow_user');
+    return savedUser ? JSON.parse(savedUser) : null;
+  });
+
+  const [deliveryPincode, setDeliveryPincode] = useState('');
+
+  const setUser = (newUser: any | null) => {
+    setUserState(newUser);
+    if (newUser) {
+      localStorage.setItem('shadow_user', JSON.stringify(newUser));
+    } else {
+      localStorage.removeItem('shadow_user');
+    }
+  };
 
   const initShopify = async () => {
     setIsLoading(true);
@@ -336,13 +439,46 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // Load custom assets and sync with Shopify
   useEffect(() => {
     const initializeStore = async () => {
-      // 1. Load Assets from IndexedDB first
+      // 0. Robustness: Anonymous sign-in for Storage/Firestore access
+      try {
+        if (!auth.currentUser) {
+          await signInAnonymously(auth);
+          console.log('[Firebase] Anonymous sign-in successful');
+        }
+      } catch (authErr) {
+        console.warn('[Firebase] Anonymous sign-in failed, continuing as guest:', authErr);
+      }
+
+      // 1. Load Assets from Firestore & IndexedDB
       const bannerKeys = ['heroBanner', 'menBanner', 'womenBanner'];
       const bannerOverrides: any = {};
+      const newLockedKeys = new Set<string>();
+      
+      try {
+        const settingsRef = doc(db, 'settings', 'siteSettings');
+        const snap = await getDoc(settingsRef);
+        if (snap.exists()) {
+           const data = snap.data();
+           console.log("[Firebase] Loaded site settings:", data);
+           for (const key of bannerKeys) {
+             if (data[key]) {
+               bannerOverrides[key] = data[key];
+               newLockedKeys.add(key);
+             }
+           }
+        }
+      } catch (err) {
+        handleFirestoreError(err, OperationType.GET, 'settings/siteSettings');
+      }
+
+      // Fallback to IndexedDB for anything not in Firestore
       for (const key of bannerKeys) {
-        const blob = await getAsset(key);
-        if (blob) {
-          bannerOverrides[key] = URL.createObjectURL(blob as Blob);
+        if (!bannerOverrides[key]) {
+          const blob = await getAsset(key);
+          if (blob) {
+            bannerOverrides[key] = URL.createObjectURL(blob as Blob);
+            newLockedKeys.add(key);
+          }
         }
       }
 
@@ -363,13 +499,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       }
       setCommunityImages(commImages);
 
-      if (Object.keys(bannerOverrides).length > 0 || ugcVideos.some((v, i) => v !== INITIAL_UGC_VIDEOS[i])) {
-        setSiteSettings(prev => ({
-          ...prev,
-          ...bannerOverrides,
-          ugcVideos
-        }));
-      }
+      setSiteSettings((prev: any) => ({
+        ...prev,
+        ...bannerOverrides,
+        ugcVideos,
+        lockedKeys: [...new Set([...(prev.lockedKeys || []), ...Array.from(newLockedKeys)])]
+      }));
 
       // 2. Fetch from Shopify and apply overrides
       await initShopify();
@@ -397,25 +532,158 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         v.startsWith('blob:') ? INITIAL_UGC_VIDEOS[i] : v
       );
     }
-    localStorage.setItem('siteSettings', JSON.stringify(cleanSettings));
+    try {
+      localStorage.setItem('siteSettings', JSON.stringify(cleanSettings));
+    } catch (e) {
+      console.warn("Failed to save siteSettings to localStorage, might be too large:", e);
+    }
   }, [siteSettings]);
 
   const isLocked = (key: string) => siteSettings.lockedKeys?.includes(key);
 
-  const uploadSiteAsset = async (key: string, file: File) => {
+  const updateSiteAssetUrl = async (key: string, url: string) => {
+    setIsUploading(true);
     try {
-      console.log(`[Asset] Uploading ${key}...`);
-      await saveAsset(key, file);
-      const url = URL.createObjectURL(file);
-      setSiteSettings(prev => ({
+      console.log(`[Asset] Updating ${key} with URL: ${url}`);
+      
+      // 1. Update Firestore for persistence
+      const settingsRef = doc(db, 'settings', 'siteSettings');
+      await setDoc(settingsRef, { [key]: url }, { merge: true });
+      
+      // 2. Update Local State
+      setSiteSettings((prev: any) => ({
         ...prev,
         [key]: url,
         lockedKeys: [...new Set([...(prev.lockedKeys || []), key])]
       }));
-      return url;
+      
+      console.log(`[Asset] Successfully updated ${key} in Firestore`);
     } catch (err) {
-      console.error(`Failed to upload asset ${key}:`, err);
+      console.error(`Failed to update asset URL for ${key}:`, err);
       throw err;
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  const resetSiteAsset = async (key: string) => {
+    setIsUploading(true);
+    try {
+      console.log(`[Asset] Resetting ${key} to default`);
+      
+      // 1. Remove from Firestore
+      const settingsRef = doc(db, 'settings', 'siteSettings');
+      const settingsSnap = await getDoc(settingsRef);
+      if (settingsSnap.exists()) {
+        const data = settingsSnap.data();
+        delete data[key];
+        await setDoc(settingsRef, data);
+      }
+      
+      // 2. Remove from Local Storage / IndexedDB
+      await removeAsset(key);
+      
+      // 3. Update State (let it revert to default)
+      setSiteSettings((prev: any) => {
+        const next = { ...prev };
+        delete next[key];
+        next.lockedKeys = next.lockedKeys?.filter((k: string) => k !== key) || [];
+        return next;
+      });
+      
+      console.log(`[Asset] Successfully reset ${key}`);
+    } catch (err) {
+      console.error(`Failed to reset asset ${key}:`, err);
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  const compressImage = async (file: File, maxWidth: number = 2560, quality: number = 0.92): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = (event) => {
+        const img = new Image();
+        img.src = event.target?.result as string;
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          let width = img.width;
+          let height = img.height;
+
+          if (width > maxWidth) {
+            height = Math.round((height * maxWidth) / width);
+            width = maxWidth;
+          }
+
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          if (!ctx) return reject('No canvas context');
+          ctx.drawImage(img, 0, 0, width, height);
+          
+          // Use jpeg for better predictability in size while maintaining high quality
+          const dataUrl = canvas.toDataURL('image/jpeg', quality);
+          resolve(dataUrl);
+        };
+        img.onerror = reject;
+      };
+      reader.onerror = reject;
+    });
+  };
+
+  const uploadSiteAsset = async (key: string, file: File) => {
+    setIsUploading(true);
+    console.log(`[Asset] Starting upload for ${key} (${(file.size / 1024).toFixed(2)} KB)`);
+    
+    try {
+      let finalUrl = '';
+
+      // 1. Try Firebase Storage with a 30-second timeout
+      try {
+        const safeKey = key.replace(/[^a-zA-Z0-9_-]/g, '');
+        const fileName = `siteAssets/${safeKey}_${Date.now()}_${file.name.replace(/[^a-zA-Z0-9.\-_]/g, '')}`;
+        const fileRef = storageRef(storage, fileName);
+        
+        console.log(`[Asset] Firebase Storage Upload Attempt: ${fileName}`);
+        
+        const uploadPromise = uploadBytes(fileRef, file);
+        const timeoutPromise = new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('Firebase upload timed out after 30s')), 30000)
+        );
+
+        await Promise.race([uploadPromise, timeoutPromise]);
+        finalUrl = await getDownloadURL(fileRef);
+
+        console.log(`[Asset] Firebase Storage Success: ${finalUrl}`);
+
+        // 2. Sync to Firestore
+        const settingsRef = doc(db, 'settings', 'siteSettings');
+        await setDoc(settingsRef, { [key]: finalUrl }, { merge: true });
+        console.log(`[Asset] Firestore Metadata Sync Success`);
+      } catch (fbErr: any) {
+        console.error(`[Asset] Firebase failed: ${fbErr.message || fbErr}`);
+        
+        // Fallback to local Data URI + IndexedDB without compression
+        console.log(`[Asset] Falling back to local storage for ${key}`);
+        await saveAsset(key, file);
+        finalUrl = await fileToDataUri(file);
+      }
+
+      // Update state
+      setSiteSettings((prev: any) => ({
+        ...prev,
+        [key]: finalUrl,
+        lockedKeys: [...new Set([...(prev.lockedKeys || []), key])]
+      }));
+      
+      console.log(`[Asset] Upload process complete for ${key}`);
+      return finalUrl;
+    } catch (err) {
+      console.error(`[Asset] CRITICAL failure for ${key}:`, err);
+      throw err;
+    } finally {
+      setIsUploading(false);
     }
   };
 
@@ -625,7 +893,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         setCommunityImages,
         uploadCommunityImage,
         uploadProductImage,
+        updateSiteAssetUrl,
+        resetSiteAsset,
         isLocked,
+        isUploading,
+        isAuthModalOpen,
+        setIsAuthModalOpen,
+        user,
+        setUser,
+        deliveryPincode,
+        setDeliveryPincode,
       }}
     >
       {children}

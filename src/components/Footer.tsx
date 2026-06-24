@@ -72,10 +72,13 @@ export default function Footer() {
         <div className="col-span-1">
           <h4 className="text-white font-bold tracking-widest text-xs uppercase mb-6">INFO</h4>
           <ul className="space-y-4 text-gray-300">
-            <li><a href="#" className="hover:text-white transition">Terms & Conditions</a></li>
-            <li><a href="#" className="hover:text-white transition">FAQs</a></li>
-            <li><a href="#" className="hover:text-white transition">Privacy Policy</a></li>
-            <li><a href="#" className="hover:text-white transition">Returns Policy</a></li>
+            <li><button onClick={() => { setCurrentView('terms'); window.scrollTo(0, 0); }} className="hover:text-white transition cursor-pointer text-left">Terms & Conditions</button></li>
+            <li><button onClick={() => { setCurrentView('faqs'); window.scrollTo(0, 0); }} className="hover:text-white transition cursor-pointer text-left">FAQs</button></li>
+            <li><button onClick={() => { setCurrentView('privacy'); window.scrollTo(0, 0); }} className="hover:text-white transition cursor-pointer text-left">Privacy Policy</button></li>
+            <li><button onClick={() => { setCurrentView('shipping-policy'); window.scrollTo(0, 0); }} className="hover:text-white transition cursor-pointer text-left">Shipping Policy</button></li>
+            <li><button onClick={() => { setCurrentView('return-policy'); window.scrollTo(0, 0); }} className="hover:text-white transition cursor-pointer text-left">Return Policy</button></li>
+            <li><button onClick={() => { setCurrentView('exchange-policy'); window.scrollTo(0, 0); }} className="hover:text-white transition cursor-pointer text-left">Exchange Policy</button></li>
+            <li><button onClick={() => { setCurrentView('payment-policy'); window.scrollTo(0, 0); }} className="hover:text-white transition cursor-pointer text-left">Payment Policy</button></li>
           </ul>
         </div>
 
@@ -118,9 +121,8 @@ export default function Footer() {
             <span>All Rights Reserved</span>
         </div>
         <div className="flex gap-6 items-center">
-            <a href="#" className="hover:text-white transition">Privacy</a>
-            <a href="#" className="hover:text-white transition">Terms</a>
-            <a href="#" className="hover:text-white transition uppercase">Returns</a>
+            <button onClick={() => { setCurrentView('privacy'); window.scrollTo(0, 0); }} className="hover:text-white transition uppercase cursor-pointer">Privacy</button>
+            <button onClick={() => { setCurrentView('terms'); window.scrollTo(0, 0); }} className="hover:text-white transition uppercase cursor-pointer">Terms</button>
         </div>
       </div>
     </footer>

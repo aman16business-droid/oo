@@ -13,16 +13,16 @@ export default function SearchResultsPage() {
   );
 
   return (
-    <div className="pt-24 md:pt-32 pb-20 px-6 md:px-12 min-h-screen bg-white font-sans">
+    <div className="pt-24 md:pt-32 pb-20 px-3 md:px-12 min-h-screen bg-white font-sans">
       <div className="max-w-[1700px] mx-auto">
-        <div className="mb-10">
+        <div className="mb-10 px-3 md:px-0">
           <p className="text-[12px] md:text-[13px] text-gray-500 font-medium mb-8">
             {filteredProducts.length} Results found for <span className="text-black font-bold uppercase">"{searchQuery}"</span>:
           </p>
         </div>
 
         {filteredProducts.length > 0 ? (
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-x-6 gap-y-12">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-x-3 gap-y-8 md:gap-x-6 md:gap-y-12">
             {filteredProducts.map((product, idx) => (
               <motion.div
                 key={product.id}

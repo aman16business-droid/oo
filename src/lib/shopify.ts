@@ -31,14 +31,14 @@ export async function getShop() {
   return data?.data?.shop;
 }
 
-export async function createCheckout(items: { variantId: string; quantity: number }[]) {
+export async function createCheckout(items: { variantId: string; quantity: number }[], attributes?: { key: string; value: string }[]) {
   try {
     const response = await fetch('/api/shopify/checkout', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
       },
-      body: JSON.stringify({ items })
+      body: JSON.stringify({ items, attributes })
     });
     const data = await response.json();
     

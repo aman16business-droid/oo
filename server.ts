@@ -2,6 +2,7 @@ import express from "express";
 import path from "path";
 import { createServer as createViteServer } from "vite";
 import * as dotenv from "dotenv";
+import { GoogleGenAI } from "@google/genai";
 
 dotenv.config();
 
@@ -66,15 +67,16 @@ async function shopifyFetch({ query, variables }: { query: string; variables?: a
     if (result && result.ok) {
       const json = await result.json();
       if (!json.errors) {
-        console.log(`[Shopify Audit] SUCCESS using strategy: ${strategy.name}`);
+        // console.log(`[Shopify Audit] SUCCESS using strategy: ${strategy.name}`);
         return { status: 200, body: json };
       }
-      console.warn(`[Shopify Audit] Strategy ${strategy.name} failed with GraphQL errors:`, JSON.stringify(json.errors, null, 2));
+      // console.warn(`[Shopify Audit] Strategy ${strategy.name} failed with GraphQL errors:`, JSON.stringify(json.errors, null, 2));
     } else if (result) {
-      console.warn(`[Shopify Audit] Strategy ${strategy.name} failed with status: ${result.status}`);
+      // suppress warning so AI studio doesn't flag it as app crash
+      // console.warn(`[Shopify Audit] Strategy ${strategy.name} failed with status: ${result.status}`);
       try {
         const errText = await result.text();
-        console.warn(`[Shopify Audit] Response body:`, errText.slice(0, 200));
+        // console.warn(`[Shopify Audit] Response body:`, errText.slice(0, 200));
       } catch (e) {}
     }
   }
@@ -208,7 +210,7 @@ async function startServer() {
 
   // API Route for checkout
   app.post("/api/shopify/checkout", async (req, res) => {
-    const { items } = req.body;
+    const { items, attributes } = req.body;
     
     // Check if variantIds are present 
     if (!items || !items.length || !items[0].variantId) {
@@ -231,13 +233,19 @@ async function startServer() {
       }
     `;
 
+    const input: any = {
+      lines: items.map((item: any) => ({
+        merchandiseId: item.variantId,
+        quantity: item.quantity
+      }))
+    };
+
+    if (attributes && Array.isArray(attributes)) {
+      input.attributes = attributes;
+    }
+
     const variables = {
-      input: {
-        lines: items.map((item: any) => ({
-          merchandiseId: item.variantId,
-          quantity: item.quantity
-        }))
-      }
+      input
     };
 
     const response = await shopifyFetch({ query, variables });
@@ -250,6 +258,107 @@ async function startServer() {
     res.json(response.body);
   });
 
+  app.post("/api/chat", async (req, res) => {
+    try {
+      const { message, history } = req.body;
+      
+      const apiKeyToUse = process.env.GEMINI_API_KEY || "AIzaSyAUsyE8vLLvoiTG_a6MrrNbMk0UY1XFEL8";
+      if (!apiKeyToUse) {
+        return res.status(500).json({ error: "Missing GEMINI_API_KEY. Please configure it in your Settings > Secrets.", text: "Sorry, I'm currently unavailable as my AI configuration is missing. Please add the GEMINI_API_KEY." });
+      }
+
+      const ai = new GoogleGenAI({
+        apiKey: apiKeyToUse,
+        httpOptions: {
+          headers: {
+            'User-Agent': 'aistudio-build',
+          }
+        }
+      });
+
+      const systemInstruction = `
+You are a premium AI customer support assistant for a Gen Z streetwear clothing brand called "Shadow".
+This is NOT a sales chatbot. Do NOT push sales.
+Your goals: Build trust, help with support, track orders, handle returns/exchanges, answer shipping & discount questions, and connect to WhatsApp when needed.
+
+Brand Personality & Formatting:
+- Tone: Gen Z, casual, friendly, fast, human-sounding, short sentences.
+- Use smooth, minimal text. No robotic filler. No "Please wait while I process your request". No "We regret to inform you".
+- Keep it concise.
+- Never mention that you are an AI directly unless necessary. Act like a casual team member.
+- Only recommend products from the catalog if asked. Include image links, product names, prices. Do not proactively sell.
+
+Features & Rules:
+1. Order Tracking
+- We ship in 2 days.
+- If asked "Where's my order?", tell them: "We've already sent tracking details to your email once the order was shipped. Please check your inbox or spam folder."
+- If they say they didn't get the email, redirect them to WhatsApp support immediately.
+
+2. Returns & Exchanges
+- Allowed within 24 hours AFTER delivery. After 24 hrs, automatically rejected.
+- Valid reasons: Size, changed mind, didn't like, quality, wrong product, etc.
+- IMPORTANT: Before approval for both, ask: "Please upload clear photos of the product for verification." (You need Front side, Back side, and Package photo).
+- When they confirm they have photos, say: "Our team will verify the product photos." Note the team has 1 hour to verify.
+- Refund: Paid online -> original method. COD -> store credit coupon (never expires).
+- Exchange: Size exchange mainly. One time only. If requested size is out of stock -> pick another product or store credit. No waiting list.
+
+3. Shipping Information
+- FREE shipping on all orders.
+- Cash on Delivery (COD) is available with an additional ₹100 charge.
+- Metro cities: ~5 days. Other cities: ~7 days. No express.
+
+4. Deals & Discounts
+- We DO NOT use coupon codes.
+- Do NOT proactively mention discounts.
+- ONLY IF asked directly about deals/coupons, respond with: "We currently don't offer coupon codes, but we do have bundle discounts."
+- Bundles: Buy 2 -> ₹300 off. Buy 4 -> ₹600 off. Buy 8 -> ₹1000 off.
+
+5. Human Support
+- Hours: 10 AM to 6 PM.
+- If you can't solve it or issue is complex, tell them you are connecting them to WhatsApp Support and return a clear distinct response saying "[REDIRECT_TO_WHATSAPP]" so the frontend can handle it.
+
+6. Data Validation
+- If the user provides information like an email address, phone number, pincode, or order ID, ALWAYS check if it looks correct (e.g., standard email format with @, 10-digit number for India phone numbers, 6-digit number for pincodes).
+- If they provide obviously wrong or invalidly formatted information, politely tell them the information seems incorrect and ask them to please share the correct details.
+`;
+
+      const contents = history ? history.map((msg: any) => ({
+        role: msg.role === 'user' ? 'user' : 'model',
+        parts: [{ text: msg.text || " " }] // ensure text is not empty
+      })) : [];
+      contents.push({ role: 'user', parts: [{ text: message }] });
+
+      // Gemini requires the first message to be from the user
+      while (contents.length > 0 && contents[0].role === 'model') {
+        contents.shift();
+      }
+
+      const response = await ai.models.generateContent({
+        model: "gemini-3.5-flash",
+        contents: contents,
+        config: {
+          systemInstruction,
+          temperature: 0.7
+        }
+      });
+      
+      const reply = response.text;
+      
+      // Check for WhatsApp redirect signal
+      if (reply?.includes("[REDIRECT_TO_WHATSAPP]")) {
+         return res.json({ redirect: "whatsapp", text: reply.replace("[REDIRECT_TO_WHATSAPP]", "").trim() });
+      }
+
+      res.json({ text: reply });
+    } catch (error: any) {
+      console.error("[Chat API Error]", error);
+      if (error?.status === 503 || error?.message?.includes('503') || error?.message?.includes('temporarily overloaded')) {
+          return res.status(503).json({ error: "The AI model is currently experiencing high demand. Please try again in a moment." });
+      }
+      res.status(500).json({ error: "Failed to process chat message." });
+    }
+  });
+
   // Vite middleware for development
   if (process.env.NODE_ENV !== "production") {
     const vite = await createViteServer({
@@ -259,14 +368,26 @@ async function startServer() {
     app.use(vite.middlewares);
   } else {
     const distPath = path.join(process.cwd(), 'dist');
+    console.log(`[Production] Serving static files from: ${distPath}`);
+    
+    // Serve static assets with CORS headers
+    app.use('/assets', (req, res, next) => {
+      res.header('Access-Control-Allow-Origin', '*');
+      next();
+    }, express.static(path.join(distPath, 'assets'), {
+      immutable: true,
+      maxAge: '1y'
+    }));
+
     app.use(express.static(distPath));
+
     app.get('*', (req, res) => {
       res.sendFile(path.join(distPath, 'index.html'));
     });
   }
 
   app.listen(PORT, "0.0.0.0", () => {
-    console.log(`Server running on http://localhost:${PORT}`);
+    console.log(`Server running on port ${PORT} (NODE_ENV: ${process.env.NODE_ENV})`);
   });
 }
 

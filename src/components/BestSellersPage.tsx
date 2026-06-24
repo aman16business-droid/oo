@@ -7,7 +7,7 @@ import RecentlyViewed from './RecentlyViewed';
 export default function BestSellersPage() {
   const { setViewedProduct, openQuickAdd, setCurrentView, recentlyViewed, shopifyProducts, isLoading } = useAppContext();
 
-  if (isLoading) {
+  if (isLoading && shopifyProducts.length === 0) {
     return (
       <div className="w-full min-h-screen flex flex-col items-center justify-center gap-4 bg-white pt-[88px]">
         <Loader2 className="w-10 h-10 animate-spin text-gray-400" />
@@ -27,10 +27,9 @@ export default function BestSellersPage() {
 
   return (
     <div className="w-full bg-white pb-20">
-      {/* Hero Banner */}
-      <div className="relative w-full h-[40vh] min-h-[350px] flex items-center justify-center bg-[#bdbdbd] overflow-hidden">
+      <div className="pt-32 pb-12 px-6 flex flex-col items-center text-center">
         {/* Breadcrumbs */}
-        <div className="absolute top-10 left-10 text-[11px] text-white font-bold z-20 flex gap-2 tracking-[0.2em] uppercase">
+        <div className="text-[11px] text-black font-bold flex gap-2 tracking-[0.2em] uppercase mb-6">
           <button 
             onClick={() => {
               setViewedProduct(null);
@@ -45,20 +44,13 @@ export default function BestSellersPage() {
           <span className="opacity-40">/</span> 
           <span className="opacity-60 cursor-default">Best Sellers</span>
         </div>
-
-        {/* Hero Content */}
-        <div className="relative flex items-center justify-center w-full px-4 text-center">
-          <h1 className="text-7xl md:text-[140px] font-black uppercase tracking-tighter text-white select-none leading-none opacity-95">
-            BEST SELLERS
-          </h1>
-        </div>
       </div>
 
 
       {/* Product Grid */}
-      <div className="max-w-[1600px] mx-auto px-6 py-8">
+      <div className="max-w-[1600px] mx-auto px-3 md:px-6 py-8">
         {(displayProducts.length > 0 ? displayProducts : fallbackProducts).length > 0 ? (
-          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-4 gap-x-6 gap-y-12">
+          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-4 gap-x-3 gap-y-8 md:gap-x-6 md:gap-y-12">
             {(displayProducts.length > 0 ? displayProducts : fallbackProducts).map((product, index) => (
               <ProductCard 
                 key={product.id + index} 

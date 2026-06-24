@@ -52,7 +52,7 @@ export default function RecentlyViewed() {
                 />
                 
                 {/* Quick actions overlay */}
-                <div className="absolute inset-x-0 bottom-0 p-3 md:p-4 translate-y-full group-hover:translate-y-0 transition-transform duration-300">
+                <div className="absolute inset-x-0 bottom-0 p-3 md:p-4 translate-y-full group-hover:translate-y-0 transition-transform duration-300 hidden md:block">
                   <button 
                     onClick={(e) => {
                       e.stopPropagation();

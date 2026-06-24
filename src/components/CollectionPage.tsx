@@ -19,20 +19,42 @@ export default function CollectionPage() {
   // Filter products based on collectionMeta
   // For now, we search in titles/descriptions or collections handles if available
   const displayProducts = shopifyProducts.filter(product => {
+    const titleLower = collectionMeta.title.toLowerCase();
+    const categoryLower = collectionMeta.category.toLowerCase();
+    
+    // Create base terms (handle simple plurals like "t-shirts" -> "t-shirt")
     const searchTerms = [
-      collectionMeta.title.toLowerCase(),
-      collectionMeta.category.toLowerCase()
+      titleLower,
+      categoryLower,
+      titleLower.endsWith('s') ? titleLower.slice(0, -1) : titleLower,
+      categoryLower.endsWith('s') ? categoryLower.slice(0, -1) : categoryLower
     ];
     
-    const matchesSearch = searchTerms.some(term => 
-      product.title.toLowerCase().includes(term) || 
-      product.description.toLowerCase().includes(term) ||
-      product.collections.some(c => c.toLowerCase().includes(term))
-    );
+    const cleanStr = (str: string) => str.toLowerCase().replace(/[^a-z0-9]/g, '');
+
+    const matchesSearch = searchTerms.some(term => {
+      const cleanTerm = cleanStr(term);
+      return cleanStr(product.title).includes(cleanTerm) || 
+             cleanStr(product.description).includes(cleanTerm) ||
+             product.collections.some(c => cleanStr(c).includes(cleanTerm));
+    });
 
     const matchesGender = collectionMeta.gender 
-      ? product.collections.some(c => c.toLowerCase().includes(collectionMeta.gender!)) ||
-        product.title.toLowerCase().includes(collectionMeta.gender!)
+      ? product.collections.some(c => {
+          const cClean = cleanStr(c);
+          const genderClean = cleanStr(collectionMeta.gender!);
+          const genderPluralClean = cleanStr(collectionMeta.gender! === 'women' ? "womens" : "mens");
+          
+          if (collectionMeta.gender === 'men') {
+             return (cClean.includes('men') && !cClean.includes('women')) || cClean === 'men' || cClean === 'mens';
+          }
+          
+          return cClean.includes(genderClean) || cClean.includes(genderPluralClean);
+        }) ||
+        (collectionMeta.gender === 'men' 
+          ? (cleanStr(product.title).includes('men') && !cleanStr(product.title).includes('women'))
+          : (cleanStr(product.title).includes(cleanStr(collectionMeta.gender!)) || cleanStr(product.title).includes(cleanStr(collectionMeta.gender! === 'women' ? "womens" : "mens")))
+        )
       : true;
 
     return matchesSearch && matchesGender;
@@ -40,10 +62,9 @@ export default function CollectionPage() {
 
   return (
     <div className="w-full bg-white pb-20">
-      {/* Hero Banner */}
-      <div className="relative w-full h-[40vh] min-h-[350px] flex items-center justify-center bg-[#bdbdbd] overflow-hidden">
+      <div className="pt-32 pb-12 px-6 flex flex-col items-center text-center">
         {/* Breadcrumbs */}
-        <div className="absolute top-10 left-10 text-[11px] text-white font-bold z-20 flex gap-2 tracking-[0.2em] uppercase">
+        <div className="text-[11px] text-black font-bold flex gap-2 tracking-[0.2em] uppercase mb-6">
           <button 
             onClick={() => {
               setViewedProduct(null);
@@ -58,23 +79,12 @@ export default function CollectionPage() {
           <span className="opacity-40">/</span> 
           <span className="opacity-60 cursor-default">{collectionMeta.title}</span>
         </div>
-
-        {/* Hero Content */}
-        <div className="relative flex items-center justify-center w-full px-4 text-center">
-          <motion.h1 
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="text-5xl md:text-[100px] font-black uppercase tracking-tighter text-white select-none leading-none opacity-95"
-          >
-            {collectionMeta.title}
-          </motion.h1>
-        </div>
       </div>
 
       {/* Product Grid */}
-      <div className="max-w-[1600px] mx-auto px-6 py-12">
+      <div className="max-w-[1600px] mx-auto px-3 md:px-6 py-12">
         {displayProducts.length > 0 ? (
-          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-4 gap-x-6 gap-y-12">
+          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-4 gap-x-3 gap-y-8 md:gap-x-6 md:gap-y-12">
             {displayProducts.map((product, index) => (
               <ProductCard 
                 key={product.id} 

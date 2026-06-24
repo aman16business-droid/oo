@@ -47,7 +47,7 @@ export const ProductCard = React.memo(({ product, onAddToCart, onViewProduct }: 
         </button>
 
         {/* Hover Action Bar - Match Image Solid Box Style */}
-        <div className="absolute bottom-0 left-0 right-0 z-20">
+        <div className="absolute bottom-0 left-0 right-0 z-20 hidden md:block">
            <button 
              onClick={(e) => {
                e.stopPropagation();
@@ -210,16 +210,13 @@ function GridSection({
   onViewProduct: (p: Product) => void
 }) {
   return (
-    <section className="max-w-[1440px] mx-auto px-6 md:px-10">
+    <section className="max-w-[1440px] mx-auto px-3 md:px-10">
       <div className="flex items-center justify-between mb-4 md:mb-6">
         <div>
           <h2 className="text-xl md:text-3xl font-bold text-gray-900 tracking-tight flex items-center gap-3">
             <span className="w-1.5 h-6 bg-[#df3333] rounded-full"></span>
             {title}
           </h2>
-          <p className="text-[10px] md:text-xs text-gray-400 font-medium uppercase tracking-[0.2em] mt-2 ml-4">
-            {subtitle}
-          </p>
         </div>
         <button 
           onClick={onExplore}
@@ -229,7 +226,7 @@ function GridSection({
         </button>
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-6 md:gap-8">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-8">
         {products.slice(0, 4).map((product) => (
           <ProductCard 
             key={product.id}

@@ -3,16 +3,19 @@ import { Ruler, ChevronRight, ChevronLeft, Truck, ShieldCheck, CreditCard, Loade
 import { motion, AnimatePresence } from 'motion/react';
 import { useAppContext, Product } from '../AppContext';
 import { ProductCard } from './ProductSections';
+import { checkCodEligibility } from '../lib/pincode';
 
 import RecentlyViewed from './RecentlyViewed';
 
 export default function ProductPage({ product: initialProduct }: { product: Product }) {
+  // ProductPage Component
   const { 
     addToCart, setViewedProduct, setCurrentView, recentlyViewed, 
     openQuickAdd, setIsCartOpen, shopifyProducts, isLoading,
     addToWishlist, removeFromWishlist, isProductInWishlist, 
     isCartOpen, isSearchOpen, isWishlistOpen, communityImages,
-    uploadCommunityImage, uploadProductImage, isLocked
+    uploadCommunityImage, uploadProductImage, isLocked,
+    deliveryPincode, setDeliveryPincode
   } = useAppContext();
   
   const [product, setProduct] = useState(initialProduct);
@@ -25,6 +28,78 @@ export default function ProductPage({ product: initialProduct }: { product: Prod
   const [pendingAction, setPendingAction] = useState<'cart' | 'buy' | null>(null);
   const [quantity, setQuantity] = useState(1);
   const [expandedSection, setExpandedSection] = useState<string | null>('description');
+
+  const [pincode, setPincode] = useState(deliveryPincode || '');
+  const [pincodeStatus, setPincodeStatus] = useState<'idle' | 'checking' | 'success' | 'error'>('idle');
+  const [pincodeMessage, setPincodeMessage] = useState('');
+  const [codStatus, setCodStatus] = useState<{ eligible: boolean; message?: string } | null>(null);
+
+  // Smart dynamic FOMO data based on product ID
+  const hashId = useMemo(() => {
+    return product.id.toString().split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+  }, [product.id]);
+
+  const basePeopleLooking = (hashId % 30) + 14; // 14 to 43
+  const [currentPeopleLooking, setCurrentPeopleLooking] = useState(basePeopleLooking);
+
+  useEffect(() => {
+    setCurrentPeopleLooking(basePeopleLooking);
+    const timer = setInterval(() => {
+      setCurrentPeopleLooking((prev) => {
+        const change = Math.floor(Math.random() * 5) - 2; // -2 to +2
+        let next = prev + change;
+        if (next < 5) next = 5;
+        if (next > basePeopleLooking + 15) next = basePeopleLooking + 15;
+        return next;
+      });
+    }, 20000);
+    return () => clearInterval(timer);
+  }, [basePeopleLooking]);
+
+  const leftInStock = (hashId % 12) + 2; // 2 to 13
+  const isLowStock = leftInStock <= 5;
+  const isTrending = hashId % 2 === 0;
+
+  const handleCheckPincode = async () => {
+    if (!pincode || pincode.length !== 6 || !/^[1-8]\d{5}$/.test(pincode)) {
+      setPincodeStatus('error');
+      setPincodeMessage('Please enter a valid 6-digit Indian pincode.');
+      return;
+    }
+    
+    setPincodeStatus('checking');
+    
+    try {
+      const response = await fetch(`https://api.postalpincode.in/pincode/${pincode}`);
+      const data = await response.json();
+      
+      if (data && data[0] && data[0].Status === 'Success') {
+        setPincodeStatus('success');
+        setDeliveryPincode(pincode);
+        const minDate = new Date();
+        minDate.setDate(minDate.getDate() + 4);
+        const maxDate = new Date();
+        maxDate.setDate(maxDate.getDate() + 6);
+        const minDateStr = minDate.toLocaleDateString('en-US', { day: 'numeric', month: 'short' });
+        const maxDateStr = maxDate.toLocaleDateString('en-US', { day: 'numeric', month: 'short' });
+        
+        const locationName = data[0].PostOffice && data[0].PostOffice[0] ? data[0].PostOffice[0].District : '';
+        const locationText = locationName ? ` to ${locationName}` : '';
+        
+        const codCheck = checkCodEligibility(pincode);
+        setCodStatus(codCheck);
+        
+        setPincodeMessage(`Delivery${locationText} expected between ${minDateStr} and ${maxDateStr}.`);
+      } else {
+        setPincodeStatus('error');
+        setPincodeMessage('Invalid pincode. Please enter a real Indian pincode.');
+      }
+    } catch (err) {
+      // Fallback
+      setPincodeStatus('error');
+      setPincodeMessage('Could not verify pincode. Please try again.');
+    }
+  };
 
   const handleMainImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -66,7 +141,7 @@ export default function ProductPage({ product: initialProduct }: { product: Prod
   const arrivalRange = `${formatDate(arrivalStart)} - ${formatDate(arrivalEnd)}`;
 
   const otherRecentlyViewed = useMemo(() => recentlyViewed.filter(p => p.id !== product.id), [recentlyViewed, product.id]);
-  
+
   const relatedProducts = useMemo(() => {
     const related = shopifyProducts
       .filter(p => p.id !== product.id && p.collections.some(c => product.collections.includes(c)))
@@ -88,6 +163,23 @@ export default function ProductPage({ product: initialProduct }: { product: Prod
       setProduct(updated);
     }
   }, [shopifyProducts, product.id]);
+
+  const handleShare = async () => {
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: product.title,
+          text: `Check out ${product.title} at Shadow Store!`,
+          url: window.location.href,
+        });
+      } catch (error) {
+        console.error('Error sharing:', error);
+      }
+    } else {
+      // Fallback
+      alert(`Share not supported on this browser. You can copy the link: ${window.location.href}`);
+    }
+  };
 
   const isAnyDrawerOpen = isCartOpen || isSearchOpen || isWishlistOpen;
 
@@ -184,39 +276,11 @@ export default function ProductPage({ product: initialProduct }: { product: Prod
     // Initial scroll for community gallery to enable left scrolling
     const container = document.getElementById('community-carousel');
     if (container) {
-      container.scrollLeft = container.scrollWidth / 4;
-      
-      // Auto-scroll every 3 seconds
-      const autoScrollInterval = setInterval(() => {
-        const isMobile = window.innerWidth < 768;
-        if (isMobile) {
-          // Vertical scroll for mobile (2 rows visible, scroll by row height)
-          const rowHeight = container.clientHeight / 2;
-          const maxScrollY = container.scrollHeight - container.clientHeight;
-          
-          if (container.scrollTop >= maxScrollY - 10) {
-            container.scrollTo({ top: 0, behavior: 'smooth' });
-          } else {
-            container.scrollBy({ top: rowHeight, behavior: 'smooth' });
-          }
-        } else {
-          // Horizontal scroll for desktop
-          const scrollAmount = container.clientWidth / 5;
-          const maxScrollX = container.scrollWidth - container.clientWidth;
-          
-          if (container.scrollLeft >= maxScrollX - 10) {
-            container.scrollTo({ left: 0, behavior: 'smooth' });
-          } else {
-            container.scrollBy({ left: scrollAmount, behavior: 'smooth' });
-          }
-        }
-      }, 3000);
-
-      return () => clearInterval(autoScrollInterval);
+      container.scrollLeft = 0;
     }
   }, []);
 
-  if (isLoading) {
+  if (isLoading && !product) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-white">
         <Loader2 className="animate-spin text-black/10" size={40} strokeWidth={1} />
@@ -224,8 +288,8 @@ export default function ProductPage({ product: initialProduct }: { product: Prod
     );
   }
   return (
-    <div className="bg-white min-h-screen selection:bg-black selection:text-white">
-      <div className="max-w-[1440px] mx-auto px-4 md:px-8 lg:px-12 pt-12 md:pt-16 pb-8">
+    <div className="bg-white min-h-screen selection:bg-black selection:text-white pt-24 md:pt-32">
+      <div className="max-w-[1440px] mx-auto px-4 md:px-8 lg:px-12 pb-8">
         
         {/* Main Product Layout */}
         <div className="flex flex-col lg:flex-row gap-8 lg:gap-16">
@@ -244,20 +308,6 @@ export default function ProductPage({ product: initialProduct }: { product: Prod
                         loading={idx === 0 ? "eager" : "lazy"}
                         decoding="async"
                       />
-                      {/* Upload Button Overlay */}
-                      {!product.image?.startsWith('blob:') && (
-                        <div className="absolute top-4 left-4 z-20">
-                          <button 
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              mainImageInputRef.current?.click();
-                            }}
-                            className="bg-white/90 backdrop-blur-md p-2 rounded-full shadow-xl text-black"
-                          >
-                            <Upload size={14} />
-                          </button>
-                        </div>
-                      )}
                     </div>
                   ))}
                 </div>
@@ -281,30 +331,7 @@ export default function ProductPage({ product: initialProduct }: { product: Prod
                    />
                    <div className="absolute inset-0 bg-gradient-to-b from-black/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
                    
-                   {/* Upload Button Overlay */}
-                   {!isLocked(`productImage_${product.id}`) && (
-                     <div className="absolute top-10 left-10 z-50 transition-all">
-                       <button 
-                         onClick={(e) => {
-                           e.stopPropagation();
-                           mainImageInputRef.current?.click();
-                         }}
-                         className="bg-black text-white p-4 rounded-full shadow-2xl hover:scale-110 transition-all flex items-center gap-2 text-[11px] font-black tracking-widest uppercase border border-white/20"
-                       >
-                         <Upload size={18} />
-                         <span>Upload Product Photo</span>
-                       </button>
-                       <input 
-                         type="file" 
-                         ref={mainImageInputRef} 
-                         onChange={handleMainImageUpload} 
-                         className="hidden" 
-                         accept="image/*"
-                       />
-                     </div>
-                   )}
-
-                   <button className="absolute top-6 right-6 p-3 bg-white/90 backdrop-blur-xl rounded-full shadow-2xl hover:bg-white hover:scale-110 active:scale-95 transition-all duration-300 group-hover:translate-y-0 translate-y-2 opacity-0 group-hover:opacity-100">
+                   <button onClick={handleShare} className="absolute top-6 right-6 p-3 bg-white/90 backdrop-blur-xl rounded-full shadow-2xl hover:bg-white hover:scale-110 active:scale-95 transition-all duration-300 group-hover:translate-y-0 translate-y-2 opacity-0 group-hover:opacity-100">
                      <Share2 size={22} className="text-black" />
                    </button>
                 </div>
@@ -329,12 +356,21 @@ export default function ProductPage({ product: initialProduct }: { product: Prod
               <h1 className="text-xl md:text-2xl font-bold uppercase tracking-tight text-black leading-tight flex-1">
                 {product.title}
               </h1>
-              <button 
-                onClick={() => isProductInWishlist(product.id) ? removeFromWishlist(product.id) : addToWishlist(product)}
-                className={`p-2 transition-all duration-300 group ${isProductInWishlist(product.id) ? 'text-[#df3333]' : 'text-gray-300 hover:text-black'}`}
-              >
-                <Heart size={28} className={isProductInWishlist(product.id) ? 'fill-current' : 'group-hover:scale-110 transition-transform'} strokeWidth={1} />
-              </button>
+              <div className="flex gap-2">
+                <button 
+                  onClick={handleShare}
+                  className="p-2 transition-all duration-300 text-gray-300 hover:text-black group"
+                  title="Share"
+                >
+                  <Share2 size={24} className="group-hover:scale-110 transition-transform" strokeWidth={1} />
+                </button>
+                <button 
+                  onClick={() => isProductInWishlist(product.id) ? removeFromWishlist(product.id) : addToWishlist(product)}
+                  className={`p-2 transition-all duration-300 group ${isProductInWishlist(product.id) ? 'text-[#df3333]' : 'text-gray-300 hover:text-black'}`}
+                >
+                  <Heart size={28} className={isProductInWishlist(product.id) ? 'fill-current' : 'group-hover:scale-110 transition-transform'} strokeWidth={1} />
+                </button>
+              </div>
             </div>
             
             <div className="flex items-center gap-4 mb-6">
@@ -353,15 +389,29 @@ export default function ProductPage({ product: initialProduct }: { product: Prod
               )}
             </div>
             
+            {/* Scarcity & FOMO Triggers */}
+            <div className="flex flex-col gap-2 mb-6 max-w-sm">
+              <div className="flex items-center gap-2 text-[12px] text-orange-600 font-bold bg-orange-50 px-3 py-2 rounded-lg border border-orange-100 self-start">
+                 <span>🔥</span>
+                 <span>Trending: {currentPeopleLooking} people are viewing this right now.</span>
+              </div>
+              {isLowStock && (
+                <div className="flex items-center gap-2 text-[12px] text-[#df3333] font-bold bg-[#df3333]/5 px-3 py-2 rounded-lg border border-[#df3333]/10 self-start">
+                   <span className="animate-pulse">⚠️</span>
+                   <span>Selling Fast! Only {leftInStock} left in stock.</span>
+                </div>
+              )}
+            </div>
+
             <button className="text-[10px] text-gray-400 underline mb-8 self-start hover:text-black">
               Shipping calculated at checkout.
             </button>
 
             {/* Size Selector with Measurements */}
-            <div className="mb-8" ref={sizeAnchorRef}>
-              <div className="flex justify-between items-end mb-4 px-0.5">
+            <div className="mb-6 md:mb-8" ref={sizeAnchorRef}>
+              <div className="flex justify-between items-end mb-3 md:mb-4 px-0.5">
                 <div className="flex items-center gap-2">
-                  <span className={`text-[11px] font-black uppercase tracking-[0.2em] transition-colors ${sizeError ? 'text-[#df3333]' : 'text-black'}`}>
+                  <span className={`text-[10px] md:text-[11px] font-black uppercase tracking-[0.2em] transition-colors ${sizeError ? 'text-[#df3333]' : 'text-black'}`}>
                     {sizeError ? 'Choose your size' : 'Select Size'}
                   </span>
                   {sizeError && (
@@ -372,7 +422,7 @@ export default function ProductPage({ product: initialProduct }: { product: Prod
                     />
                   )}
                 </div>
-                <button className="flex items-center gap-2 text-[10px] font-bold text-gray-400 hover:text-[#df3333] transition-colors uppercase tracking-widest">
+                <button className="flex items-center gap-2 text-[9px] md:text-[10px] font-bold text-gray-400 hover:text-[#df3333] transition-colors uppercase tracking-widest">
                   <Ruler size={14} /> Size Chart
                 </button>
               </div>
@@ -382,7 +432,7 @@ export default function ProductPage({ product: initialProduct }: { product: Prod
                   <button
                     key={size}
                     onClick={() => setSelectedSize(size)}
-                    className={`h-12 flex items-center justify-center text-xs font-bold transition-all border rounded-md uppercase ${selectedSize === size ? 'bg-black text-white border-black shadow-sm' : sizeError ? 'bg-white text-[#df3333] border-[#df3333] border-dashed animate-pulse' : 'bg-white text-gray-400 border-gray-100 hover:border-black hover:text-black'}`}
+                    className={`h-9 md:h-12 flex items-center justify-center text-[10px] md:text-xs font-bold transition-all border rounded-md uppercase ${selectedSize === size ? 'bg-black text-white border-black shadow-sm' : sizeError ? 'bg-white text-[#df3333] border-[#df3333] border-dashed animate-pulse' : 'bg-white text-gray-400 border-gray-100 hover:border-black hover:text-black'}`}
                   >
                     {size}
                   </button>
@@ -391,31 +441,109 @@ export default function ProductPage({ product: initialProduct }: { product: Prod
             </div>
 
             {/* Action Buttons - Elite Performance Pack */}
-            <div className="flex flex-col gap-4 mb-10">
-              <div className="flex gap-4">
-                 <div className="h-16 w-32 border-2 border-gray-100 rounded-2xl flex items-center justify-between px-5 bg-gray-50/50" style={{ flexShrink: 0 }}>
-                    <button onClick={() => setQuantity(Math.max(1, quantity - 1))} className="text-gray-400 hover:text-black p-2 transition-colors active:scale-75"><Minus size={16} strokeWidth={3} /></button>
-                    <span className="text-base font-black italic">{quantity}</span>
-                    <button onClick={() => setQuantity(quantity + 1)} className="text-gray-400 hover:text-black p-2 transition-colors active:scale-75"><Plus size={16} strokeWidth={3} /></button>
+            <div className="flex flex-col gap-2 md:gap-4 mb-6 md:mb-8">
+              <div className="flex gap-2 md:gap-4">
+                 <div className="h-11 md:h-16 w-24 md:w-32 border-2 border-gray-100 rounded-lg md:rounded-2xl flex items-center justify-between px-2 md:px-5 bg-gray-50/50" style={{ flexShrink: 0 }}>
+                    <button onClick={() => setQuantity(Math.max(1, quantity - 1))} className="text-gray-400 hover:text-black p-1 md:p-2 transition-colors active:scale-75"><Minus size={12} className="md:w-4 md:h-4" strokeWidth={3} /></button>
+                    <span className="text-xs md:text-base font-black italic">{quantity}</span>
+                    <button onClick={() => setQuantity(quantity + 1)} className="text-gray-400 hover:text-black p-1 md:p-2 transition-colors active:scale-75"><Plus size={12} className="md:w-4 md:h-4" strokeWidth={3} /></button>
                  </div>
                  <button 
                    onClick={handleAddToCart}
-                   className="flex-1 bg-white border-2 border-black text-black h-16 rounded-2xl font-black text-xs tracking-[0.2em] uppercase hover:bg-black hover:text-white transition-all duration-500 shadow-xl shadow-black/5 active:scale-95 flex items-center justify-center gap-3 group"
+                   className="flex-1 bg-white border-2 border-black text-black h-11 md:h-16 rounded-lg md:rounded-2xl font-black text-[9px] md:text-xs tracking-[0.2em] uppercase hover:bg-black hover:text-white transition-all duration-500 shadow-xl shadow-black/5 active:scale-95 flex items-center justify-center gap-1.5 md:gap-3 group"
                  >
-                   <ShoppingBag size={18} className="group-hover:rotate-12 transition-transform" />
+                   <ShoppingBag size={14} className="md:w-[18px] md:h-[18px] group-hover:rotate-12 transition-transform" />
                    ADD TO CART
                  </button>
               </div>
               <button 
                 onClick={handleBuyNow}
-                className="relative w-full bg-black text-white h-16 rounded-2xl font-black text-xs tracking-[0.3em] uppercase overflow-hidden group shadow-[0_20px_40px_-10px_rgba(0,0,0,0.3)] active:scale-[0.98] transition-all"
+                className="relative w-full bg-black text-white h-11 md:h-[64px] rounded-lg md:rounded-2xl font-black transition-all flex items-center justify-center gap-2 md:gap-4 hover:opacity-90 mt-1 md:mt-2"
               >
-                <span className="relative z-10 flex items-center justify-center gap-2">
-                  BUY IT NOW
-                  <ChevronRight size={16} strokeWidth={3} className="group-hover:translate-x-1 transition-transform" />
-                </span>
-                <div className="absolute inset-0 bg-gradient-to-r from-red-600/20 via-transparent to-transparent -translate-x-full group-hover:translate-x-0 transition-transform duration-700"></div>
+                <div className="relative z-10 flex items-center justify-center gap-2 md:gap-3">
+                  <span className="text-sm md:text-xl capitalize font-semibold tracking-normal">Buy Now</span>
+                  
+                  <div className="flex -space-x-1.5 items-center">
+                     <div className="w-6 h-6 md:w-8 md:h-8 rounded-full bg-white flex items-center justify-center z-10 border-[1.5px] border-gray-200">
+                       <img src="https://upload.wikimedia.org/wikipedia/commons/2/24/Paytm_Logo_%28standalone%29.svg" alt="Paytm" className="h-1.5 md:h-2" />
+                     </div>
+                     <div className="w-6 h-6 md:w-8 md:h-8 rounded-full bg-white flex items-center justify-center z-20 border-[1.5px] border-white shadow-sm">
+                       <img src="https://upload.wikimedia.org/wikipedia/commons/c/c1/Google_%22G%22_logo.svg" alt="GPay" className="h-[12px] md:h-[18px]" />
+                     </div>
+                  </div>
+                </div>
               </button>
+            </div>
+
+            {/* Pincode Checker */}
+            <div className="mb-6 md:mb-10 bg-gray-50/50 border border-gray-100 rounded-lg md:rounded-2xl p-3 md:p-5 relative overflow-hidden">
+              <div className="flex items-center gap-2 mb-2 md:mb-4">
+                 <Truck size={14} className="md:w-[18px] md:h-[18px] text-black" strokeWidth={2.5} />
+                 <h4 className="font-semibold text-[10px] md:text-sm">Check Delivery & Services</h4>
+              </div>
+              <div className={`flex bg-white rounded-lg md:rounded-xl border ${pincodeStatus === 'error' ? 'border-[#df3333]' : pincodeStatus === 'success' ? 'border-green-500' : 'border-gray-200'} overflow-hidden focus-within:border-black focus-within:ring-1 focus-within:ring-black transition-all`}>
+                 <div className="pl-3 md:pl-4 flex items-center justify-center">
+                   <div className={`w-1.5 h-1.5 md:w-3 md:h-3 rounded-full ${pincodeStatus === 'success' ? 'bg-green-500' : pincodeStatus === 'error' ? 'bg-[#df3333]' : 'bg-gray-300'} animate-pulse`}></div>
+                 </div>
+                 <input 
+                   type="text" 
+                   maxLength={6}
+                   value={pincode}
+                   onChange={(e) => {
+                     setPincode(e.target.value.replace(/\D/g, ''));
+                     if (pincodeStatus !== 'idle') setPincodeStatus('idle');
+                   }}
+                   placeholder="Enter Delivery Pincode" 
+                   className="w-full text-[10px] md:text-sm outline-none px-2 md:px-3 py-2 md:py-3 font-medium placeholder:font-normal placeholder:text-gray-400"
+                 />
+                 <button 
+                   onClick={handleCheckPincode}
+                   disabled={pincodeStatus === 'checking'}
+                   className="px-3 md:px-5 font-bold text-[10px] md:text-sm text-[#df3333] hover:bg-[#df3333]/10 transition-colors uppercase tracking-wider disabled:opacity-50"
+                 >
+                   {pincodeStatus === 'checking' ? <Loader2 size={12} className="md:w-4 md:h-4 animate-spin" /> : 'Check'}
+                 </button>
+              </div>
+              <div className="mt-4 flex flex-col gap-2">
+                 {pincodeStatus === 'success' && (
+                    <>
+                      <div className="flex items-center gap-2 text-xs font-semibold text-green-600 bg-green-50 p-2 rounded-lg">
+                        <ShieldCheck size={14} />
+                        <span>{pincodeMessage}</span>
+                      </div>
+                      {codStatus && codStatus.eligible && (
+                        <div className="flex items-center gap-2 text-xs font-semibold text-green-600 bg-green-50 p-2 rounded-lg">
+                          <ShieldCheck size={14} />
+                          <span>Cash on Delivery is available here.</span>
+                        </div>
+                      )}
+                      {codStatus && !codStatus.eligible && (
+                        <div className="flex items-center gap-2 text-xs font-semibold text-[#df3333] bg-[#df3333]/10 p-2 rounded-lg">
+                          <Info size={14} />
+                          <span>{codStatus.message || 'COD is not available here.'} Only prepaid orders are accepted for this pin code.</span>
+                        </div>
+                      )}
+                    </>
+                 )}
+                 {pincodeStatus === 'error' && (
+                    <div className="flex items-center gap-2 text-xs font-semibold text-[#df3333] bg-[#df3333]/10 p-2 rounded-lg">
+                      <Info size={14} />
+                      <span>{pincodeMessage}</span>
+                    </div>
+                 )}
+                 {(pincodeStatus === 'idle' || pincodeStatus === 'checking') && (
+                   <>
+                     <div className="flex items-center gap-2 text-xs text-gray-500">
+                       <div className="w-1.5 h-1.5 rounded-full bg-gray-300"></div>
+                       <span>Cash on Delivery is available.</span>
+                     </div>
+                     <div className="flex items-center gap-2 text-xs text-gray-500">
+                       <div className="w-1.5 h-1.5 rounded-full bg-gray-300"></div>
+                       <span>Express Free Delivery for prepaid orders.</span>
+                     </div>
+                   </>
+                 )}
+              </div>
             </div>
 
             {/* World-Class Compact Trust Bar */}
@@ -532,23 +660,37 @@ export default function ProductPage({ product: initialProduct }: { product: Prod
                 <span className="w-8 h-[1px] bg-black"></span>
                 <span className="text-[10px] font-black uppercase tracking-[0.4em] text-gray-400">Community Squad</span>
               </div>
-              <h2 className="text-2xl md:text-5xl font-black italic uppercase tracking-tighter leading-[0.9]">
-                We are sharing our <span className="text-[#df3333]">Customer Images</span>
+              <h2 className="text-2xl md:text-4xl font-black italic uppercase tracking-tighter leading-[1.1] mb-2">
+                Rock our Fit. Tag us, get featured
               </h2>
+              <div className="flex flex-col gap-3 mt-4">
+                <p className="text-sm md:text-base text-gray-600 font-medium">
+                  upload your pic wearing our gear and flex on our website.
+                </p>
+                <a 
+                  href="https://instagram.com/wearshadow__" 
+                  target="_blank" 
+                  rel="noopener noreferrer" 
+                  className="inline-flex items-center justify-center gap-2 bg-gradient-to-tr from-[#fd5949] to-[#d6249f] text-white px-6 py-3 rounded-full text-sm font-bold tracking-wide hover:scale-105 transition-transform w-fit shadow-lg"
+                >
+                  <Instagram size={18} />
+                  @wearshadow__
+                </a>
+              </div>
             </div>
           </div>
 
           <div className="relative group/gallery">
             <div 
               id="community-carousel"
-              className="grid grid-cols-2 md:flex gap-3 md:gap-4 h-[440px] xs:h-[480px] md:h-auto overflow-y-auto md:overflow-x-auto no-scrollbar snap-y md:snap-x snap-mandatory pt-4 pb-12 px-4 md:px-0"
+              className="flex gap-3 md:gap-4 overflow-x-auto no-scrollbar snap-x snap-mandatory pt-4 pb-12 px-4 md:px-0"
               style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
             >
-            {communityImages.map((img, i) => {
+            {[communityImages[1], communityImages[0], ...communityImages.slice(2)].filter(Boolean).map((img, i) => {
               return (
                 <div 
                   key={i}
-                  className="flex-shrink-0 w-full md:w-[calc(20%-12.8px)] aspect-[4/5] snap-start"
+                  className="flex-shrink-0 w-[75vw] sm:w-[45vw] md:w-[calc(20%-12.8px)] aspect-[4/5] snap-center md:snap-start"
                 >
                   <div className="relative w-full h-full overflow-hidden group rounded-xl md:rounded-2xl bg-gray-50 border border-gray-100 shadow-sm">
                     <img 
@@ -557,27 +699,6 @@ export default function ProductPage({ product: initialProduct }: { product: Prod
                       className="w-full h-full object-cover transition-transform duration-[1.5s] group-hover:scale-110"
                     />
                     
-                     {/* Upload Button Overlay */}
-                     <div className="absolute top-2 left-2 z-50 transition-all">
-                         <button 
-                           onClick={(e) => {
-                             e.stopPropagation();
-                             communityInputRefs.current[i]?.click();
-                           }}
-                           className="bg-black text-white p-2 rounded-full shadow-2xl transition-all border border-white/20"
-                         >
-                           <Upload size={12} />
-                         </button>
-                         <input 
-                           type="file" 
-                           ref={el => communityInputRefs.current[i] = el}
-                           onChange={(e) => handleCommunityImageUpload(e, i)}
-                           className="hidden"
-                           accept="image/*"
-                         />
-                       </div>
-                     
-
                     <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
                       <Instagram className="text-white" size={20} />
                     </div>

@@ -1,7 +1,8 @@
-import { useState, useEffect } from 'react';
-import { Search, User, ShoppingBag, Menu, X, Eclipse, Heart, ChevronRight, Store } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import { Search, User, ShoppingBag, Menu, X, Eclipse, Heart, ChevronRight, Store, Upload } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useAppContext } from '../AppContext';
+import { saveAsset, getAsset } from '../lib/db';
 
 type Category = 'Women' | 'Men';
 
@@ -11,7 +12,8 @@ export default function Header() {
   const [activeCategory, setActiveCategory] = useState<Category>('Women');
   const [hoveredCategory, setHoveredCategory] = useState<Category | null>(null);
   const [shopName, setShopName] = useState<string>('');
-  const { cart, setIsCartOpen, setIsSearchOpen, setViewedProduct, viewedProduct, currentView, setCurrentView, connectionStatus, shopifyProducts, wishlist, setIsWishlistOpen, setCollectionMeta } = useAppContext();
+  
+  const { cart, setIsCartOpen, setIsSearchOpen, setViewedProduct, viewedProduct, currentView, setCurrentView, connectionStatus, shopifyProducts, wishlist, setIsWishlistOpen, setCollectionMeta, user, setIsAuthModalOpen } = useAppContext();
 
   useEffect(() => {
     if (connectionStatus === 'connected') {
@@ -29,7 +31,7 @@ export default function Header() {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  const isTransparentView = (currentView === 'home' || currentView === 'men-wear' || currentView === 'women-wear' || currentView === 'new-arrivals' || currentView === 'premium' || currentView === 'best-sellers' || currentView === 'shop-all' || currentView === 'collection') && viewedProduct === null;
+  const isTransparentView = currentView === 'home' && viewedProduct === null;
   const headerBgClass = isTransparentView 
     ? `bg-transparent text-black ${isScrolled ? 'border-b border-black/5' : ''}`
     : 'bg-white text-black border-b border-gray-100 shadow-sm';
@@ -38,19 +40,37 @@ export default function Header() {
     <header className={`fixed top-0 left-0 w-full z-[100] font-sans transition-all duration-300 ${headerBgClass}`}>
       {/* Announcement Bar */}
       <div className={`transition-all duration-300 overflow-hidden ${isScrolled ? 'h-0 opacity-0' : 'h-auto opacity-100'}`}>
-        <div className={`${isTransparentView ? 'bg-transparent' : 'bg-black'} text-[9px] sm:text-[10px] py-1.5 flex leading-tight relative overflow-hidden`}>
-          <div className={`flex whitespace-nowrap uppercase tracking-[0.25em] font-medium animate-marquee w-max ${isTransparentView ? 'text-black' : 'text-white'}`}>
-            <div className="flex gap-16 items-center px-10">
-              <span>EXPLORE THE LATEST COLLECTIONS</span>
-              <span>FREE SHIPPING ON ORDERS OVER 5000</span>
-              <span>NEW DEALS EVERY WEEK</span>
-              <span>SUMMER SALE IS LIVE NOW</span>
+        <div className="bg-black text-white text-[9px] sm:text-[10px] py-2 flex leading-tight relative overflow-hidden font-medium">
+          <div className="flex whitespace-nowrap uppercase tracking-[0.2em] animate-marquee w-max text-white/90">
+            <div className="flex gap-8 items-center px-4">
+              <span>RS 100 OFF ON PREPAID ORDERS</span>
+              <span className="text-[6px] opacity-50">✦</span>
+              <span>FREE SHIPPING</span>
+              <span className="text-[6px] opacity-50">✦</span>
+              <span>RS 100 OFF ON PREPAID ORDERS</span>
+              <span className="text-[6px] opacity-50">✦</span>
+              <span>FREE SHIPPING</span>
+              <span className="text-[6px] opacity-50">✦</span>
             </div>
-            <div className="flex gap-16 items-center px-10" aria-hidden="true">
-              <span>EXPLORE THE LATEST COLLECTIONS</span>
-              <span>FREE SHIPPING ON ORDERS OVER 5000</span>
-              <span>NEW DEALS EVERY WEEK</span>
-              <span>SUMMER SALE IS LIVE NOW</span>
+            <div className="flex gap-8 items-center px-4" aria-hidden="true">
+              <span>RS 100 OFF ON PREPAID ORDERS</span>
+              <span className="text-[6px] opacity-50">✦</span>
+              <span>FREE SHIPPING</span>
+              <span className="text-[6px] opacity-50">✦</span>
+              <span>RS 100 OFF ON PREPAID ORDERS</span>
+              <span className="text-[6px] opacity-50">✦</span>
+              <span>FREE SHIPPING</span>
+              <span className="text-[6px] opacity-50">✦</span>
+            </div>
+            <div className="flex gap-8 items-center px-4" aria-hidden="true">
+              <span>RS 100 OFF ON PREPAID ORDERS</span>
+              <span className="text-[6px] opacity-50">✦</span>
+              <span>FREE SHIPPING</span>
+              <span className="text-[6px] opacity-50">✦</span>
+              <span>RS 100 OFF ON PREPAID ORDERS</span>
+              <span className="text-[6px] opacity-50">✦</span>
+              <span>FREE SHIPPING</span>
+              <span className="text-[6px] opacity-50">✦</span>
             </div>
           </div>
         </div>
@@ -114,7 +134,18 @@ export default function Header() {
           <button onClick={() => setIsSearchOpen(true)} className="p-2.5 cursor-pointer hover:opacity-60 transition" aria-label="Search">
             <Search size={22} strokeWidth={1.5} />
           </button>
-          <button className="hidden sm:block p-2.5 cursor-pointer hover:opacity-60 transition" aria-label="Account">
+          <button 
+            className="hidden sm:block p-2.5 cursor-pointer hover:opacity-60 transition" 
+            aria-label="Account"
+            onClick={() => {
+              if (user) {
+                setCurrentView('account' as any);
+                setViewedProduct(null);
+              } else {
+                setIsAuthModalOpen(true);
+              }
+            }}
+          >
             <User size={22} strokeWidth={1.5} />
           </button>
           <button 
@@ -164,9 +195,20 @@ export default function Header() {
                 >
                   <X size={28} />
                 </button>
-                <div className="flex items-center gap-2 text-[11px] font-bold tracking-widest uppercase cursor-pointer">
+                <div 
+                  className="flex items-center gap-2 text-[11px] font-bold tracking-widest uppercase cursor-pointer"
+                  onClick={() => {
+                    if (user) {
+                      setCurrentView('account' as any);
+                      setIsMobileMenuOpen(false);
+                    } else {
+                      setIsAuthModalOpen(true);
+                      setIsMobileMenuOpen(false);
+                    }
+                  }}
+                >
                   <User size={18} strokeWidth={2} />
-                  LOGIN
+                  {user ? 'ACCOUNT' : 'LOGIN'}
                 </div>
                 <button className="p-1 hover:bg-gray-100 rounded-full transition-colors">
                   <Store size={26} strokeWidth={1.5} />
@@ -332,46 +374,11 @@ export default function Header() {
                   ))}
                 </div>
               </div>
-
-              {/* Right Side: Huge Featured Images */}
-              <div className="flex-1 flex h-[75vh] min-h-[600px]">
-                <div className="relative flex-1 group overflow-hidden cursor-pointer bg-gray-50 border-l border-gray-100">
-                  <img 
-                    src={hoveredCategory === 'Women' 
-                      ? "https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?q=80&w=1000&auto=format&fit=crop" 
-                      : "https://images.unsplash.com/photo-1550246140-5119ae4790b8?q=80&w=1000&auto=format&fit=crop"
-                    } 
-                    className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-105"
-                    alt="Featured"
-                    referrerPolicy="no-referrer"
-                  />
-                  <div className="absolute inset-0 bg-black/10 group-hover:bg-black/0 transition-colors duration-500" />
-                  <div className="absolute bottom-16 left-16">
-                    <p className="text-[13px] font-black text-white uppercase tracking-[0.3em] mb-4 drop-shadow-sm">ESSENTIALS</p>
-                    <button className="text-[11px] font-bold text-white border-b-2 border-white pb-1 hover:opacity-60 transition uppercase tracking-widest">SHOP NOW</button>
-                  </div>
-                </div>
-                <div className="relative flex-1 group overflow-hidden cursor-pointer bg-gray-50 border-l border-gray-100">
-                  <img 
-                    src={hoveredCategory === 'Women' 
-                      ? "https://images.unsplash.com/photo-1539109132394-6fb3e299b645?q=80&w=1000&auto=format&fit=crop" 
-                      : "https://images.unsplash.com/photo-1617137968427-85924c800a22?q=80&w=1000&auto=format&fit=crop"
-                    } 
-                    className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-105"
-                    alt="Premium"
-                    referrerPolicy="no-referrer"
-                  />
-                  <div className="absolute inset-0 bg-black/10 group-hover:bg-black/0 transition-colors duration-500" />
-                  <div className="absolute bottom-16 left-16">
-                    <p className="text-[13px] font-black text-white uppercase tracking-[0.3em] mb-4 drop-shadow-sm">PREMIUM EDIT</p>
-                    <button className="text-[11px] font-bold text-white border-b-2 border-white pb-1 hover:opacity-60 transition uppercase tracking-widest">EXPLORE</button>
-                  </div>
-                </div>
-              </div>
             </div>
           </motion.div>
         )}
       </AnimatePresence>
+
     </header>
   );
 }

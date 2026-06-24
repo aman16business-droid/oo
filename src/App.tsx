@@ -1,14 +1,22 @@
+import React, { useLayoutEffect } from 'react';
 import { useAppContext } from './AppContext';
 import Header from './components/Header';
 import Footer from './components/Footer';
 import Drawers from './components/Drawers';
 import QuickAddDrawer from './components/QuickAddDrawer';
-import ProductPage from './components/ProductPage';
+import CartFloatingBar from './components/CartFloatingBar';
+import Chatbot from './components/Chatbot';
+import AuthModal from './components/AuthModal';
+
+// Active/Home Components
 import Hero from './components/Hero';
 import CategorySplit from './components/CategorySplit';
 import ProductSections from './components/ProductSections';
 import Features from './components/Features';
 import RecentlyViewed from './components/RecentlyViewed';
+
+// Lazy loaded pages
+import ProductPage from './components/ProductPage';
 import NewArrivalsPage from './components/NewArrivalsPage';
 import ShopAllPage from './components/ShopAllPage';
 import MenWearPage from './components/MenWearPage';
@@ -17,26 +25,30 @@ import SearchResultsPage from './components/SearchResultsPage';
 import PremiumPage from './components/PremiumPage';
 import BestSellersPage from './components/BestSellersPage';
 import CollectionPage from './components/CollectionPage';
-import CartFloatingBar from './components/CartFloatingBar';
+import AccountPage from './components/AccountPage';
+import TermsPage from './components/TermsPage';
+import FAQPage from './components/FAQPage';
+import PrivacyPage from './components/PrivacyPage';
+import ShippingPolicyPage from './components/ShippingPolicyPage';
+import ReturnPolicyPage from './components/ReturnPolicyPage';
+import ExchangePolicyPage from './components/ExchangePolicyPage';
+import PaymentPolicyPage from './components/PaymentPolicyPage';
 
+// Main Application Component
 function App() {
   const { currentView, viewedProduct } = useAppContext();
 
-  // If a product is being viewed, show the Product Detail Page regardless of currentView
-  if (viewedProduct) {
-    return (
-      <div className="min-h-screen bg-white">
-        <Header />
-        <main>
-          <ProductPage product={viewedProduct} />
-        </main>
-        <Footer />
-        <Drawers />
-        <QuickAddDrawer />
-        <CartFloatingBar />
-      </div>
-    );
-  }
+  useLayoutEffect(() => {
+    // Disable smooth scrolling temporarily for instant page transitions
+    document.documentElement.style.scrollBehavior = 'auto';
+    window.scrollTo({ top: 0, left: 0, behavior: 'instant' } as ScrollToOptions);
+    
+    // Restore smooth scroll after a brief delay
+    const timer = setTimeout(() => {
+      document.documentElement.style.scrollBehavior = '';
+    }, 50);
+    return () => clearTimeout(timer);
+  }, [currentView, viewedProduct]);
 
   const renderView = () => {
     switch (currentView) {
@@ -66,6 +78,22 @@ function App() {
         return <BestSellersPage />;
       case 'collection':
         return <CollectionPage />;
+      case 'terms':
+        return <TermsPage />;
+      case 'faqs':
+        return <FAQPage />;
+      case 'privacy':
+        return <PrivacyPage />;
+      case 'shipping-policy':
+        return <ShippingPolicyPage />;
+      case 'return-policy':
+        return <ReturnPolicyPage />;
+      case 'exchange-policy':
+        return <ExchangePolicyPage />;
+      case 'payment-policy':
+        return <PaymentPolicyPage />;
+      case 'account' as any:
+        return <AccountPage />;
       default:
         return (
           <>
@@ -78,16 +106,24 @@ function App() {
     }
   };
 
+  const Content = viewedProduct ? (
+    <ProductPage product={viewedProduct} />
+  ) : (
+    renderView()
+  );
+
   return (
-    <div className="min-h-screen bg-white selection:bg-black selection:text-white">
+    <div className="min-h-screen bg-white selection:bg-black selection:text-white overflow-x-clip relative w-full">
       <Header />
       <main>
-        {renderView()}
+          {Content}
       </main>
       <Footer />
       <Drawers />
       <QuickAddDrawer />
       <CartFloatingBar />
+      <Chatbot />
+      <AuthModal />
     </div>
   );
 }

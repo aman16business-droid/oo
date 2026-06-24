@@ -103,10 +103,17 @@ export default function CartFloatingBar() {
               <div className="flex items-center gap-1.5 md:gap-2">
                 <button 
                   onClick={() => setIsCartOpen(true)}
-                  className="bg-black text-white px-5 md:px-8 py-2 md:py-3 rounded-lg md:rounded-xl font-black text-[11px] md:text-sm tracking-[0.1em] md:tracking-[0.2em] uppercase transition-all hover:scale-[1.02] active:scale-[0.98] shadow-lg shadow-black/10 flex items-center gap-1 md:gap-2 group whitespace-nowrap"
+                  className="bg-black text-white px-5 md:px-8 h-10 md:h-[48px] rounded-lg md:rounded-xl font-black transition-all hover:scale-[1.02] active:scale-[0.98] shadow-lg shadow-black/10 flex items-center justify-center gap-2 group whitespace-nowrap"
                 >
-                  CHECKOUT
-                  <ChevronRight size={14} className="md:w-[18px] md:h-[18px] group-hover:translate-x-1 transition-transform" />
+                  <span className="text-[13px] md:text-base capitalize font-semibold tracking-normal">Buy Now</span>
+                  <div className="flex -space-x-1.5 items-center">
+                     <div className="w-6 h-6 rounded-full bg-white flex items-center justify-center z-10 border border-gray-200">
+                       <img src="https://upload.wikimedia.org/wikipedia/commons/2/24/Paytm_Logo_%28standalone%29.svg" alt="Paytm" className="h-1.5" />
+                     </div>
+                     <div className="w-6 h-6 rounded-full bg-white flex items-center justify-center z-20 border border-white shadow-sm">
+                       <img src="https://upload.wikimedia.org/wikipedia/commons/c/c1/Google_%22G%22_logo.svg" alt="GPay" className="h-3" />
+                     </div>
+                  </div>
                 </button>
                 
                 <button 
