@@ -33,10 +33,11 @@ import ShippingPolicyPage from './components/ShippingPolicyPage';
 import ReturnPolicyPage from './components/ReturnPolicyPage';
 import ExchangePolicyPage from './components/ExchangePolicyPage';
 import PaymentPolicyPage from './components/PaymentPolicyPage';
+import { ShopifyAnalyticsTracker } from './components/ShopifyAnalyticsTracker';
 
 // Main Application Component
 function App() {
-  const { currentView, viewedProduct } = useAppContext();
+  const { currentView, viewedProduct, shopId } = useAppContext();
 
   useLayoutEffect(() => {
     // Disable smooth scrolling temporarily for instant page transitions
@@ -124,6 +125,7 @@ function App() {
       <CartFloatingBar />
       <Chatbot />
       <AuthModal />
+      <ShopifyAnalyticsTracker shopId={shopId} />
     </div>
   );
 }

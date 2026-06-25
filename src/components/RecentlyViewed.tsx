@@ -45,7 +45,7 @@ export default function RecentlyViewed() {
                 <img 
                   src={product.image} 
                   alt={product.title} 
-                  className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+                  className="w-full h-full object-contain bg-white transition-transform duration-700 group-hover:scale-110"
                   loading="lazy"
                   decoding="async"
                   referrerPolicy="no-referrer"

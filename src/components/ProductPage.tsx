@@ -233,7 +233,11 @@ export default function ProductPage({ product: initialProduct }: { product: Prod
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({ 
-          items: [{ variantId, quantity }] 
+          items: [{ 
+            variantId, 
+            quantity, 
+            attributes: selectedSize ? [{ key: "Size", value: selectedSize }] : undefined
+          }] 
         })
       });
       const data = await response.json();
@@ -304,7 +308,7 @@ export default function ProductPage({ product: initialProduct }: { product: Prod
                       <img 
                         src={img} 
                         alt={`${product.title} - view ${idx + 1}`} 
-                        className="absolute inset-0 w-full h-full object-cover" 
+                        className="absolute inset-0 w-full h-full object-contain bg-white" 
                         loading={idx === 0 ? "eager" : "lazy"}
                         decoding="async"
                       />
@@ -327,7 +331,7 @@ export default function ProductPage({ product: initialProduct }: { product: Prod
                      alt={product.title} 
                      loading="eager"
                      decoding="async"
-                     className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-105" 
+                     className="w-full h-full object-contain bg-white transition-transform duration-1000 group-hover:scale-105" 
                    />
                    <div className="absolute inset-0 bg-gradient-to-b from-black/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
                    
@@ -339,11 +343,11 @@ export default function ProductPage({ product: initialProduct }: { product: Prod
                 {/* Secondary Angles - Curated Grid */}
                 <div className="grid grid-cols-2 gap-6">
                    <div className="aspect-[3/4] bg-gray-50 rounded-[20px] overflow-hidden group/angle relative shadow-sm">
-                     <img src={product.image} alt="alternative perspective" loading="lazy" decoding="async" className="w-full h-full object-cover transition-transform duration-700 group-hover/angle:scale-110" />
+                     <img src={product.image} alt="alternative perspective" loading="lazy" decoding="async" className="w-full h-full object-contain bg-white transition-transform duration-700 group-hover/angle:scale-110" />
                      <div className="absolute inset-0 bg-black/5 opacity-0 group-hover/angle:opacity-100 transition-opacity" />
                    </div>
                    <div className="aspect-[3/4] bg-gray-50 rounded-[20px] overflow-hidden group/angle relative shadow-sm">
-                     <img src={product.image} alt="detail focus" loading="lazy" decoding="async" className="w-full h-full object-cover grayscale brightness-110 transition-transform duration-700 group-hover/angle:scale-110" />
+                     <img src={product.image} alt="detail focus" loading="lazy" decoding="async" className="w-full h-full object-contain bg-white grayscale brightness-110 transition-transform duration-700 group-hover/angle:scale-110" />
                      <div className="absolute inset-0 bg-black/5 opacity-0 group-hover/angle:opacity-100 transition-opacity" />
                    </div>
                 </div>
@@ -607,7 +611,8 @@ export default function ProductPage({ product: initialProduct }: { product: Prod
                 { 
                   id: 'description', 
                   title: 'Description', 
-                  content: product.description || 'Premium streetwear silhouette featuring ultra-heavyweight cotton construction, dropped shoulders, and a distinct boxy fit designed for the modern urban landscape.'
+                  content: product.description || 'Premium streetwear silhouette featuring ultra-heavyweight cotton construction, dropped shoulders, and a distinct boxy fit designed for the modern urban landscape.',
+                  contentHtml: product.descriptionHtml
                 },
                 { 
                   id: 'shipping', 
@@ -640,8 +645,12 @@ export default function ProductPage({ product: initialProduct }: { product: Prod
                         transition={{ duration: 0.4, ease: [0.19, 1, 0.22, 1] }}
                         className="overflow-hidden"
                       >
-                        <div className="pb-4 px-4 text-[8px] font-bold leading-[1.6] text-black/50 uppercase tracking-widest max-w-[95%]">
-                          {item.content}
+                        <div className="pb-4 px-4 text-xs md:text-sm leading-[1.6] text-black/70 max-w-[95%] shopify-html-content">
+                          {item.contentHtml ? (
+                            <div dangerouslySetInnerHTML={{ __html: item.contentHtml }} />
+                          ) : (
+                            <div className="text-[8px] font-bold uppercase tracking-widest text-black/50">{item.content}</div>
+                          )}
                         </div>
                       </motion.div>
                     )}
@@ -743,7 +752,7 @@ export default function ProductPage({ product: initialProduct }: { product: Prod
             className="md:hidden fixed bottom-6 left-2 right-2 z-[200] h-[68px] bg-white shadow-[0_20px_40px_-10px_rgba(0,0,0,0.3)] border border-gray-100 flex items-center px-2 gap-1.5 rounded-[18px] overflow-hidden will-change-transform"
           >
             <div className="relative w-10 h-10 bg-gray-50 flex-shrink-0 overflow-hidden rounded-lg border border-gray-100">
-              <img src={product.image} alt={product.title} className="w-full h-full object-cover" />
+              <img src={product.image} alt={product.title} className="w-full h-full object-contain bg-white" />
               <div className="absolute top-0.5 left-0.5 w-1.5 h-1.5 bg-[#df3333] rounded-full ring-2 ring-white animate-pulse"></div>
             </div>
 

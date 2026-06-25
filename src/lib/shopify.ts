@@ -1,6 +1,6 @@
 
-const domain = import.meta.env.VITE_SHOPIFY_STORE_DOMAIN;
-const storefrontAccessToken = import.meta.env.VITE_SHOPIFY_STOREFRONT_ACCESS_TOKEN;
+const domain = (import.meta.env.VITE_SHOPIFY_STORE_DOMAIN || 'shadowshopp.myshopify.com').replace(/^https?:\/\//, '').replace(/\/$/, '').trim();
+const storefrontAccessToken = import.meta.env.VITE_SHOPIFY_STOREFRONT_ACCESS_TOKEN?.trim();
 
 if (!domain || !storefrontAccessToken) {
   console.error('[Shopify Audit] CRITICAL: Missing Shopify configuration in .env file.');
@@ -8,9 +8,9 @@ if (!domain || !storefrontAccessToken) {
   console.log('[Shopify Audit] Token:', storefrontAccessToken ? '********' : 'MISSING');
 }
 
-async function apiFetch(path: string) {
+async function apiFetch(path: string, options: RequestInit = {}) {
   try {
-    const response = await fetch(path);
+    const response = await fetch(path, options);
     if (!response.ok) {
       throw new Error(`API error: ${response.status}`);
     }
@@ -31,7 +31,7 @@ export async function getShop() {
   return data?.data?.shop;
 }
 
-export async function createCheckout(items: { variantId: string; quantity: number }[], attributes?: { key: string; value: string }[]) {
+export async function createCheckout(items: { variantId: string; quantity: number; attributes?: { key: string; value: string }[] }[], attributes?: { key: string; value: string }[]) {
   try {
     const response = await fetch('/api/shopify/checkout', {
       method: 'POST',
@@ -42,10 +42,8 @@ export async function createCheckout(items: { variantId: string; quantity: numbe
     });
     const data = await response.json();
     
-    // Check for userErrors
     if (data?.data?.cartCreate?.userErrors?.length > 0) {
       console.error('Cart Create Errors:', data.data.cartCreate.userErrors);
-      // Return the first error message to display
       return { error: data.data.cartCreate.userErrors[0].message };
     }
 

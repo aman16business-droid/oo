@@ -60,7 +60,7 @@ export default function EssentialsBanner() {
   }, [siteSettings.ugcVideos]);
 
   const handleView = (productId: number) => {
-    const product = shopifyProducts.find(p => p.id === productId);
+    const product = shopifyProducts.find(p => String(p.id) === String(productId));
     if (product) {
       setViewedProduct(product);
       window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -135,7 +135,7 @@ export default function EssentialsBanner() {
                          </button>
                          <input 
                            type="file" 
-                           ref={el => fileInputRefs.current[item.id] = el}
+                           ref={(el) => { fileInputRefs.current[item.id] = el; }}
                            onChange={(e) => handleUpload(e, item.id)}
                            onClick={(e) => e.stopPropagation()}
                            className="hidden"
@@ -200,7 +200,7 @@ export default function EssentialsBanner() {
                      </button>
                      <input 
                         type="file" 
-                        ref={el => fileInputRefs.current[item.id] = el}
+                        ref={(el) => { fileInputRefs.current[item.id] = el; }}
                         onChange={(e) => handleUpload(e, item.id)}
                         onClick={(e) => e.stopPropagation()}
                         className="hidden"

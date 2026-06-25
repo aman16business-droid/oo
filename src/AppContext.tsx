@@ -15,6 +15,7 @@ export interface Product {
   title: string;
   handle: string;
   description: string;
+  descriptionHtml?: string;
   originalPrice: string;
   salePrice: string;
   savePercentage: string;
@@ -23,6 +24,13 @@ export interface Product {
   variants: any[];
   collections: string[];
   createdAt: string;
+  vendor?: string;
+  priceRange?: {
+    minVariantPrice?: {
+      amount: string;
+      currencyCode: string;
+    };
+  };
 }
 
 export interface CartItem extends Product {
@@ -31,7 +39,7 @@ export interface CartItem extends Product {
   variantId?: string;
 }
 
-export type ViewType = 'new-arrivals' | 'old-home' | 'shop-all' | 'men-wear' | 'women-wear' | 'search-results' | 'premium' | 'best-sellers' | 'home' | 'collection' | 'terms' | 'faqs' | 'privacy' | 'shipping-policy' | 'return-policy' | 'exchange-policy' | 'payment-policy';
+export type ViewType = 'new-arrivals' | 'old-home' | 'shop-all' | 'men-wear' | 'women-wear' | 'search-results' | 'premium' | 'best-sellers' | 'home' | 'collection' | 'terms' | 'faqs' | 'privacy' | 'shipping-policy' | 'return-policy' | 'exchange-policy' | 'payment-policy' | 'category';
 
 interface CollectionMeta {
   title: string;
@@ -80,6 +88,7 @@ interface AppContextType {
   collectionMeta: CollectionMeta | null;
   setCollectionMeta: (meta: CollectionMeta | null) => void;
   shopifyProducts: Product[];
+  shopId: string | undefined;
   isLoading: boolean;
   connectionStatus: 'connected' | 'error' | 'loading';
   refreshProducts: () => Promise<void>;
@@ -316,6 +325,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return INITIAL_PRODUCTS;
   });
 
+  const [shopId, setShopId] = useState<string | undefined>();
+
   // Helper to apply overrides from IndexedDB to products
   const applyProductOverrides = async (products: Product[]) => {
     return await Promise.all(products.map(async (p) => {
@@ -373,6 +384,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       
       const shop = await getShop();
       if (shop) {
+        setShopId(shop.id);
         console.log(`[Shopify Audit] CONNECTED TO SHOP: ${shop.name}`);
       } else {
         console.warn('[Shopify Audit] Could not fetch shop info. Token might be restricted.');
@@ -394,6 +406,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           title: node.title,
           handle: node.handle,
           description: node.description || '',
+          descriptionHtml: node.descriptionHtml || '',
           image: imagesArr[0] || '',
           images: imagesArr,
           originalPrice: node.compareAtPriceRange?.minVariantPrice?.amount || node.priceRange?.minVariantPrice?.amount || '0',
@@ -793,6 +806,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const addToCart = (item: CartItem) => {
+    // Fire analytics event
+    window.dispatchEvent(new CustomEvent('shopify:add_to_cart', { detail: item }));
+
     setCart((prev) => {
       const existing = prev.findIndex((i) => i.id === item.id && i.size === item.size);
       if (existing >= 0) {
@@ -880,6 +896,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         collectionMeta,
         setCollectionMeta,
         shopifyProducts,
+        shopId,
         isLoading,
         connectionStatus,
         refreshProducts,

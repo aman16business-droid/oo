@@ -40,7 +40,12 @@ export default function QuickAddDrawer() {
 
   const handleAddToCart = () => {
     if (!selectedSize) return;
-    addToCart({ ...quickAddProduct, size: selectedSize, quantity, variantId: selectedVariantId || quickAddProduct.variants?.[0]?.id });
+
+    const variantId = quickAddProduct.variants?.find((v: any) => 
+      v.selectedOptions?.some((o: any) => o.value === selectedSize)
+    )?.id || quickAddProduct.variants?.[0]?.id;
+
+    addToCart({ ...quickAddProduct, size: selectedSize, quantity, variantId });
     setIsQuickAddOpen(false);
     setIsCartOpen(true);
   };
@@ -80,14 +85,14 @@ export default function QuickAddDrawer() {
                       key={idx}
                       src={img} 
                       alt={`${quickAddProduct.title}-${idx}`}
-                      className="w-full object-cover"
+                      className="w-full object-contain bg-white"
                     />
                   ))
                 ) : (
                   <img 
                     src={quickAddProduct.image} 
                     alt={quickAddProduct.title}
-                    className="w-full object-cover"
+                    className="w-full object-contain bg-white"
                   />
                 )}
               </div>
@@ -176,7 +181,7 @@ export default function QuickAddDrawer() {
                           <img 
                             src={quickAddProduct.image} 
                             alt={`color-${i}`} 
-                            className="w-full h-full object-cover" 
+                            className="w-full h-full object-contain bg-white" 
                           />
                         </div>
                       ))}

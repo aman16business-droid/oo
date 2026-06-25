@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Search, User, ShoppingBag, Menu, X, Eclipse, Heart, ChevronRight, Store, Upload } from 'lucide-react';
+import { Search, User, ShoppingBag, Menu, X, Eclipse, ChevronRight, Store, Upload } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useAppContext } from '../AppContext';
 import { saveAsset, getAsset } from '../lib/db';
@@ -134,32 +134,6 @@ export default function Header() {
           <button onClick={() => setIsSearchOpen(true)} className="p-2.5 cursor-pointer hover:opacity-60 transition" aria-label="Search">
             <Search size={22} strokeWidth={1.5} />
           </button>
-          <button 
-            className="hidden sm:block p-2.5 cursor-pointer hover:opacity-60 transition" 
-            aria-label="Account"
-            onClick={() => {
-              if (user) {
-                setCurrentView('account' as any);
-                setViewedProduct(null);
-              } else {
-                setIsAuthModalOpen(true);
-              }
-            }}
-          >
-            <User size={22} strokeWidth={1.5} />
-          </button>
-          <button 
-            className="hidden sm:block p-2.5 cursor-pointer hover:opacity-60 transition relative" 
-            aria-label="Wishlist"
-            onClick={() => setIsWishlistOpen(true)}
-          >
-            <Heart size={22} strokeWidth={1.5} />
-            {wishlist.length > 0 && (
-              <span className={`absolute top-1 right-1 text-[8px] w-4 h-4 rounded-full flex items-center justify-center font-black ${!isTransparentView ? 'bg-[#df3333] text-white' : 'bg-[#df3333] text-white'} shadow-sm`}>
-                {wishlist.length}
-              </span>
-            )}
-          </button>
           <div className="relative p-2.5 cursor-pointer hover:opacity-60 transition" onClick={() => setIsCartOpen(true)}>
             <ShoppingBag size={22} strokeWidth={1.5} />
             <span className={`absolute top-1 right-1 text-[8px] w-4 h-4 rounded-full flex items-center justify-center font-black ${(isTransparentView) ? 'bg-black text-white' : 'bg-black text-white'} shadow-sm`}>
@@ -249,14 +223,6 @@ export default function Header() {
                         WOMENS NEW ARRIVALS
                       </button>
                       <hr className="border-gray-50" />
-                      <button className="px-6 py-5 flex items-center justify-between text-[13px] font-bold text-gray-800 uppercase tracking-wider text-left border-b border-gray-50">
-                        COLLECTION
-                        <ChevronRight size={16} className="text-gray-400" />
-                      </button>
-                      <button className="px-6 py-5 flex items-center justify-between text-[13px] font-bold text-gray-800 uppercase tracking-wider text-left border-b border-gray-50">
-                        COLLABORATIONS
-                        <ChevronRight size={16} className="text-gray-400" />
-                      </button>
                       {['OVERSIZED T-SHIRTS', 'BOTTOMS', 'JOGGERS', 'TOPS', 'HOODIES', 'SWEATSHIRTS'].map((item) => (
                         <button 
                           key={item}
@@ -289,14 +255,6 @@ export default function Header() {
                         MENS NEW ARRIVALS
                       </button>
                       <hr className="border-gray-50" />
-                      <button className="px-6 py-5 flex items-center justify-between text-[13px] font-bold text-gray-800 uppercase tracking-wider text-left border-b border-gray-50">
-                        COLLECTION
-                        <ChevronRight size={16} className="text-gray-400" />
-                      </button>
-                      <button className="px-6 py-5 flex items-center justify-between text-[13px] font-bold text-gray-800 uppercase tracking-wider text-left border-b border-gray-50">
-                        COLLABORATIONS
-                        <ChevronRight size={16} className="text-gray-400" />
-                      </button>
                       {['OVERSIZED T-SHIRTS', 'BOTTOMS', 'TANKS', 'CARGOS', 'JOGGERS', 'GYM WEAR', 'SHORTS', 'HOODIES', 'SWEATSHIRTS', 'JACKETS'].map((item) => (
                         <button 
                           key={item}

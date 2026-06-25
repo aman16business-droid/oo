@@ -1,3 +1,5 @@
+import React from 'react';
+
 export default function TermsPage() {
   return (
     <div className="w-full min-h-screen bg-white pt-[90px] md:pt-[100px] text-gray-900 pb-20">

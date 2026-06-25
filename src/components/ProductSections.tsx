@@ -20,7 +20,7 @@ export const ProductCard = React.memo(({ product, onAddToCart, onViewProduct }: 
           alt={product.title}
           loading="lazy"
           decoding="async"
-          className="h-full w-full object-cover transition-transform duration-700 ease-[cubic-bezier(0.23,1,0.32,1)]" 
+          className="h-full w-full object-contain bg-white transition-transform duration-700 ease-[cubic-bezier(0.23,1,0.32,1)]" 
         />
         
         {/* Shadow Overlay */}

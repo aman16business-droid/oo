@@ -117,6 +117,7 @@ export default function Drawers() {
       .map((item) => ({
         variantId: item.variantId || item.variants?.[0]?.id,
         quantity: item.quantity,
+        attributes: item.size ? [{ key: "Size", value: item.size }] : undefined
       }))
       .filter((i) => i.variantId);
 
@@ -449,7 +450,7 @@ export default function Drawers() {
                             <img
                               src={item.image}
                               alt={item.title}
-                              className="w-full h-full object-cover"
+                              className="w-full h-full object-contain bg-white"
                             />
                           </div>
                           <div className="flex-1 min-w-0 flex flex-col justify-between py-0.5 relative">
@@ -573,7 +574,7 @@ export default function Drawers() {
                             <img
                               src={product.image}
                               alt={product.title}
-                              className="w-full h-full object-cover mix-blend-multiply group-hover:scale-110 transition duration-700"
+                              className="w-full h-full object-contain bg-white mix-blend-multiply group-hover:scale-110 transition duration-700"
                             />
                             {parseFloat(product.savePercentage) > 0 && (
                               <div className="absolute top-1.5 left-1.5 bg-[#e33535] text-white text-[6px] font-black px-1.5 py-0.5 rounded-[4px] uppercase tracking-tighter shadow-sm">
@@ -816,7 +817,7 @@ export default function Drawers() {
                         <img
                           src={product.image}
                           alt={product.title}
-                          className="w-full h-full object-cover transition duration-500 group-hover:scale-110"
+                          className="w-full h-full object-contain bg-white transition duration-500 group-hover:scale-110"
                         />
                       </div>
                       <div className="flex-1 min-w-0 flex flex-col justify-between py-0.5">

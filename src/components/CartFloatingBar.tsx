@@ -71,7 +71,7 @@ export default function CartFloatingBar() {
                             <img 
                                 src={displayItem.image} 
                                 alt={displayItem.title} 
-                                className="w-full h-full object-cover"
+                                className="w-full h-full object-contain bg-white"
                             />
                         </div>
                         <div className="flex flex-col min-w-0">
@@ -120,7 +120,7 @@ export default function CartFloatingBar() {
                   onClick={() => setIsCartBarVisible(false)}
                   className="w-8 h-8 md:w-10 md:h-10 flex items-center justify-center text-gray-400 hover:text-black transition-colors rounded-full hover:bg-gray-100 shrink-0"
                 >
-                  <X size={16} md:size={20} />
+                  <X size={20} />
                 </button>
               </div>
             </div>
