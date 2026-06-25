@@ -8,8 +8,21 @@ dotenv.config();
 
 // Standardizing the shopify fetch for server-side use
 async function shopifyFetch({ query, variables }: { query: string; variables?: any }) {
-  const storefrontAccessToken = (process.env.VITE_SHOPIFY_STOREFRONT_ACCESS_TOKEN || process.env.SHOPIFY_STORE_TOKEN || '').trim();
-  const domain = (process.env.VITE_SHOPIFY_STORE_DOMAIN || process.env.SHOPIFY_STORE_DOMAIN || 'shadowshopp.myshopify.com').replace(/^https?:\/\//, '').replace(/\/$/, '').trim();
+  const storefrontAccessToken = (
+    process.env.VITE_SHOPIFY_STOREFRONT_ACCESS_TOKEN || 
+    process.env.SHOPIFY_STOREFRONT_ACCESS_TOKEN || 
+    process.env.SHOPIFY_STORE_TOKEN || 
+    process.env.STORMFRONT || 
+    process.env.STORMFRONT_TOKEN ||
+    ''
+  ).trim();
+  
+  const domain = (
+    process.env.VITE_SHOPIFY_STORE_DOMAIN || 
+    process.env.SHOPIFY_STORE_DOMAIN || 
+    process.env.SHOPIFY_DOMAIN ||
+    'shadowshopp.myshopify.com'
+  ).replace(/^https?:\/\//, '').replace(/\/$/, '').trim();
 
   if (!domain || !storefrontAccessToken) {
     return { status: 500, error: 'Shopify configuration missing (domain or token)' };

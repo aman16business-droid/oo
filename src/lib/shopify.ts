@@ -3,9 +3,7 @@ const domain = (import.meta.env.VITE_SHOPIFY_STORE_DOMAIN || 'shadowshopp.myshop
 const storefrontAccessToken = import.meta.env.VITE_SHOPIFY_STOREFRONT_ACCESS_TOKEN?.trim();
 
 if (!domain || !storefrontAccessToken) {
-  console.error('[Shopify Audit] CRITICAL: Missing Shopify configuration in .env file.');
-  console.log('[Shopify Audit] Domain:', domain);
-  console.log('[Shopify Audit] Token:', storefrontAccessToken ? '********' : 'MISSING');
+  console.warn('[Shopify] Frontend variables missing. Falling back to server-side proxy for data.');
 }
 
 async function apiFetch(path: string, options: RequestInit = {}) {
