@@ -1,9 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { getAsset, saveAsset, removeAsset } from './lib/db';
-import { db, auth, storage } from './lib/firebase';
-import { doc, getDoc, setDoc } from 'firebase/firestore';
-import { ref as storageRef, uploadBytes, getDownloadURL } from 'firebase/storage';
-import { signInAnonymously } from 'firebase/auth';
 import defaultHeroBanner from './assets/images/new_hero_banner_1781808849648.jpg';
 import defaultMenBanner from './assets/images/men_fashion_banner_final_1781774068555.jpg';
 import defaultWomenBanner from './assets/images/women_fashion_banner_final_1781774082253.jpg';
@@ -206,54 +202,6 @@ const INITIAL_PRODUCTS: Product[] = [
   }
 ];
 
-enum OperationType {
-  CREATE = 'create',
-  UPDATE = 'update',
-  DELETE = 'delete',
-  LIST = 'list',
-  GET = 'get',
-  WRITE = 'write',
-}
-
-interface FirestoreErrorInfo {
-  error: string;
-  operationType: OperationType;
-  path: string | null;
-  authInfo: {
-    userId?: string | null;
-    email?: string | null;
-    emailVerified?: boolean | null;
-    isAnonymous?: boolean | null;
-    tenantId?: string | null;
-    providerInfo?: {
-      providerId?: string | null;
-      email?: string | null;
-    }[];
-  }
-}
-
-function handleFirestoreError(error: unknown, operationType: OperationType, path: string | null) {
-  const errInfo: FirestoreErrorInfo = {
-    error: error instanceof Error ? error.message : String(error),
-    authInfo: {
-      userId: auth.currentUser?.uid,
-      email: auth.currentUser?.email,
-      emailVerified: auth.currentUser?.emailVerified,
-      isAnonymous: auth.currentUser?.isAnonymous,
-      tenantId: auth.currentUser?.tenantId,
-      providerInfo: auth.currentUser?.providerData?.map(provider => ({
-        providerId: provider.providerId,
-        email: provider.email,
-      })) || []
-    },
-    operationType,
-    path
-  }
-  console.error('Firestore Error: ', JSON.stringify(errInfo));
-  // Don't throw here, just log it. Let the caller decide if it should throw.
-  return errInfo;
-}
-
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [cart, setCart] = useState<CartItem[]>([]);
   const [isCartOpen, setIsCartOpen] = useState(false);
@@ -452,39 +400,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // Load custom assets and sync with Shopify
   useEffect(() => {
     const initializeStore = async () => {
-      // 0. Robustness: Anonymous sign-in for Storage/Firestore access
-      try {
-        if (!auth.currentUser) {
-          await signInAnonymously(auth);
-          console.log('[Firebase] Anonymous sign-in successful');
-        }
-      } catch (authErr) {
-        console.warn('[Firebase] Anonymous sign-in failed, continuing as guest:', authErr);
-      }
-
-      // 1. Load Assets from Firestore & IndexedDB
+      // 1. Load Assets from IndexedDB
       const bannerKeys = ['heroBanner', 'menBanner', 'womenBanner'];
       const bannerOverrides: any = {};
       const newLockedKeys = new Set<string>();
       
-      try {
-        const settingsRef = doc(db, 'settings', 'siteSettings');
-        const snap = await getDoc(settingsRef);
-        if (snap.exists()) {
-           const data = snap.data();
-           console.log("[Firebase] Loaded site settings:", data);
-           for (const key of bannerKeys) {
-             if (data[key]) {
-               bannerOverrides[key] = data[key];
-               newLockedKeys.add(key);
-             }
-           }
-        }
-      } catch (err) {
-        handleFirestoreError(err, OperationType.GET, 'settings/siteSettings');
-      }
-
-      // Fallback to IndexedDB for anything not in Firestore
+      // Fallback to IndexedDB for assets
       for (const key of bannerKeys) {
         if (!bannerOverrides[key]) {
           const blob = await getAsset(key);
@@ -559,18 +480,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     try {
       console.log(`[Asset] Updating ${key} with URL: ${url}`);
       
-      // 1. Update Firestore for persistence
-      const settingsRef = doc(db, 'settings', 'siteSettings');
-      await setDoc(settingsRef, { [key]: url }, { merge: true });
-      
-      // 2. Update Local State
+      // Update Local State
       setSiteSettings((prev: any) => ({
         ...prev,
         [key]: url,
         lockedKeys: [...new Set([...(prev.lockedKeys || []), key])]
       }));
       
-      console.log(`[Asset] Successfully updated ${key} in Firestore`);
     } catch (err) {
       console.error(`Failed to update asset URL for ${key}:`, err);
       throw err;
@@ -584,19 +500,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     try {
       console.log(`[Asset] Resetting ${key} to default`);
       
-      // 1. Remove from Firestore
-      const settingsRef = doc(db, 'settings', 'siteSettings');
-      const settingsSnap = await getDoc(settingsRef);
-      if (settingsSnap.exists()) {
-        const data = settingsSnap.data();
-        delete data[key];
-        await setDoc(settingsRef, data);
-      }
-      
-      // 2. Remove from Local Storage / IndexedDB
+      // 1. Remove from Local Storage / IndexedDB
       await removeAsset(key);
       
-      // 3. Update State (let it revert to default)
+      // 2. Update State (let it revert to default)
       setSiteSettings((prev: any) => {
         const next = { ...prev };
         delete next[key];
@@ -647,41 +554,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const uploadSiteAsset = async (key: string, file: File) => {
     setIsUploading(true);
-    console.log(`[Asset] Starting upload for ${key} (${(file.size / 1024).toFixed(2)} KB)`);
+    console.log(`[Asset] Starting local storage for ${key} (${(file.size / 1024).toFixed(2)} KB)`);
     
     try {
       let finalUrl = '';
 
-      // 1. Try Firebase Storage with a 30-second timeout
-      try {
-        const safeKey = key.replace(/[^a-zA-Z0-9_-]/g, '');
-        const fileName = `siteAssets/${safeKey}_${Date.now()}_${file.name.replace(/[^a-zA-Z0-9.\-_]/g, '')}`;
-        const fileRef = storageRef(storage, fileName);
-        
-        console.log(`[Asset] Firebase Storage Upload Attempt: ${fileName}`);
-        
-        const uploadPromise = uploadBytes(fileRef, file);
-        const timeoutPromise = new Promise((_, reject) => 
-          setTimeout(() => reject(new Error('Firebase upload timed out after 30s')), 30000)
-        );
-
-        await Promise.race([uploadPromise, timeoutPromise]);
-        finalUrl = await getDownloadURL(fileRef);
-
-        console.log(`[Asset] Firebase Storage Success: ${finalUrl}`);
-
-        // 2. Sync to Firestore
-        const settingsRef = doc(db, 'settings', 'siteSettings');
-        await setDoc(settingsRef, { [key]: finalUrl }, { merge: true });
-        console.log(`[Asset] Firestore Metadata Sync Success`);
-      } catch (fbErr: any) {
-        console.error(`[Asset] Firebase failed: ${fbErr.message || fbErr}`);
-        
-        // Fallback to local Data URI + IndexedDB without compression
-        console.log(`[Asset] Falling back to local storage for ${key}`);
-        await saveAsset(key, file);
-        finalUrl = await fileToDataUri(file);
-      }
+      // Save to IndexedDB
+      await saveAsset(key, file);
+      finalUrl = await fileToDataUri(file);
 
       // Update state
       setSiteSettings((prev: any) => ({
@@ -690,7 +570,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         lockedKeys: [...new Set([...(prev.lockedKeys || []), key])]
       }));
       
-      console.log(`[Asset] Upload process complete for ${key}`);
+      console.log(`[Asset] Storage process complete for ${key}`);
       return finalUrl;
     } catch (err) {
       console.error(`[Asset] CRITICAL failure for ${key}:`, err);

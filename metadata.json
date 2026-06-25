@@ -1,6 +1,6 @@
 {
   "name": "shadow-store",
-  "description": "Premium e-commerce platform SHADOW with highly accurate UI replicating sections like Hero, Split Categories, Banners, and Product Grids.",
+  "description": "Premium e-commerce platform SHADOW with Shopify integration and local asset management.",
   "requestFramePermissions": [],
   "majorCapabilities": [
     "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
